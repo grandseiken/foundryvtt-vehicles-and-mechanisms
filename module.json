@@ -1,0 +1,13 @@
+{
+  "name": "vehicles",
+  "title": "Vehicles",
+  "description": "<p>TODO</p><p>See page at URL below for full usage instructions.</p>",
+  "author": "grandseiken",
+  "version": "0.1.0",
+  "minimumCoreVersion": "0.6.0",
+  "compatibleCoreVersion": "0.6.6",
+  "scripts": ["vehicles.js"],
+  "url": "https://github.com/grandseiken/foundryvtt-vehicles",
+  "manifest": "https://raw.githubusercontent.com/grandseiken/foundryvtt-vehicles/master/module.json",
+  "download": "https://github.com/grandseiken/foundryvtt-vehicles/archive/v0.1.0.zip"
+}
