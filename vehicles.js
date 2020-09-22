@@ -1,7 +1,7 @@
-
 const VEHICLES = {
   SCOPE: "vehicles",
   LOG_PREFIX: "Vehicles | ",
+  BYPASS: "vehicles_bypass",
 };
 
 class Vehicles {
@@ -9,6 +9,7 @@ class Vehicles {
     console.log(VEHICLES.LOG_PREFIX, "Initialized");
     Hooks.on("createToken", this._onCreateToken.bind(this));
     Hooks.on("deleteToken", this._onDeleteToken.bind(this));
+    Hooks.on("preUpdateToken", this._onPreUpdateToken.bind(this));
     Hooks.on("updateToken", this._onUpdateToken.bind(this));
     Hooks.on("preUpdateDrawing", this._onPreUpdateDrawing.bind(this));
     Hooks.on("updateDrawing", this._onUpdateDrawing.bind(this));
@@ -25,6 +26,9 @@ class Vehicles {
   }
 
   _refreshControllerMap() {
+    if (!game.user.isGM) {
+      return;
+    }
     this._controllerMap = {};
     for (const scene of game.scenes) {
       for (const token of scene.data.tokens) {
@@ -34,6 +38,9 @@ class Vehicles {
   }
 
   _refreshControllerMapForToken(scene, token) {
+    if (!game.user.isGM) {
+      return;
+    }
     const id = scene._id + ":" + token._id;
     delete this._controllerMap[id];
     for (const vehicleScene of game.scenes) {
@@ -155,15 +162,39 @@ class Vehicles {
   }
 
   _onDeleteToken(scene, token, options, userId) {
-    delete this._controllerMap[scene._id + ":" + token._id];
+    if (game.user.isGM) {
+      delete this._controllerMap[scene._id + ":" + token._id];
+    }
+  }
+
+  _onPreUpdateToken(scene, token, update, options, userId) {
+    // TODO: 16??
+    if (game.keyboard.isDown("Alt") && game.user.isGM) {
+      options[VEHICLES.BYPASS] = true;
+    }
+    return true;
   }
 
   _onUpdateToken(scene, token, update, options, userId) {
+    if (!game.user.isGM) {
+      return;
+    }
+
     if ("name" in update) {
       this._refreshControllerMapForToken(scene, token);
     }
-    if (!game.multilevel._isProperToken(token) || MLT.REPLICATED_UPDATE in options ||
+    const controller = this._controllerMap[scene._id + ":" + token._id];
+    if (!controller) {
+      return;
+    }
+
+    if (!game.multilevel._isProperToken(token) ||
+        !game.multilevel._isPrimaryGamemaster() ||
+        MLT.REPLICATED_UPDATE in options || VEHICLES.BYPASS in options ||
         !("x" in update || "y" in update || "rotation" in update)) {
+      controller.x = token.x;
+      controller.y = token.y;
+      controller.r = token.rotation;
       return;
     }
 
@@ -171,10 +202,6 @@ class Vehicles {
     // TODO: auto-capture vs. capture current.
     // TODO: recursive search to find all things that should be moved, including other controlled tokens and their vehicles at once.
     // TODO: rotate drawing to rotate controls; flip X / Y as well? Does that work? Optional?
-    const controller = this._controllerMap[scene._id + ":" + token._id];
-    if (!controller) {
-      return;
-    }
     const t = duplicate(token);
     game.multilevel._queueAsync(requestBatch => {
       const handled = {};
