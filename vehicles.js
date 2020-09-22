@@ -200,10 +200,85 @@ class Vehicles {
   }
 
   _runVehicleMoveAlgorithm(requestBatch, handled, queue) {
+    const relativeDiff = (centre, point, diff) => {
+      const result = duplicate(diff);
+      const offset = game.multilevel._rotate(centre, point, diff.r);
+      result.x += offset.x - point.x;
+      result.y += offset.y - point.y;
+      return result;
+    };
+
+    const updateData = (object, diff) => {
+      return {
+        _id: object._id,
+        x: object.x + diff.x,
+        y: object.y + diff.y,
+        rotation: object.rotation + diff.r,
+      };
+    };
+
+    const handleSimpleCapture = (vehicleScene, vehicle, vehicleCentre, diff,
+                                 type, elements, centreFunction, updateFunction) => {
+      for (const e of elements) {
+        const centre = centreFunction(e);
+        const eId = this._typedUniqueId(type, vehicleScene, e);
+        if (handled[eId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
+          continue;
+        }
+        updateFunction(updateData(e, relativeDiff(vehicleCentre, centre, diff)));
+        handled[eId] = true;
+      }
+    }
+
     for (let i = 0; i < queue.length; ++i) {
       const diff = queue[i];
       const [vehicleScene, vehicle] = diff.vehicle;
       const vehicleCentre = game.multilevel._getDrawingCentre(vehicle);
+
+      if (vehicle.flags[VEHICLES.SCOPE].captureTiles) {
+        handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
+                            "T", vehicleScene.data.tiles,
+                            e => game.multilevel._getDrawingCentre(e),
+                            u => requestBatch.updateTile(vehicleScene, u));
+      }
+      if (vehicle.flags[VEHICLES.SCOPE].captureLights) {
+        handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
+                            "l", vehicleScene.data.lights, e => e,
+                            u => requestBatch.updateLight(vehicleScene, u));
+      }
+      if (vehicle.flags[VEHICLES.SCOPE].captureSounds) {
+        handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
+                            "s", vehicleScene.data.sounds, e => e,
+                            u => requestBatch.updateSound(vehicleScene, u));
+      }
+
+      if (vehicle.flags[VEHICLES.SCOPE].captureDrawings) {
+        for (const vd of vehicleScene.data.drawings) {
+          const centre = game.multilevel._getDrawingCentre(vd);
+          const vdId = this._typedUniqueId("d", vehicleScene, vd);
+          if (handled[vdId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
+            continue;
+          }
+
+          const rDiff = relativeDiff(vehicleCentre, centre, diff);
+          const vdUpdate = updateData(vd, rDiff);
+          requestBatch.updateDrawing(vehicleScene, vdUpdate);
+          handled[vdId] = true;
+
+          const subVehicleState = this._vehicleMap[this._uniqueId(vehicleScene, vd)];
+          if (subVehicleState) {
+            queue.push({
+              vehicle: [vehicleScene, vd],
+              x: rDiff.x,
+              y: rDiff.y,
+              r: rDiff.r,
+            });
+            subVehicleState.x = vdUpdate.x;
+            subVehicleState.y = vdUpdate.y;
+            subVehicleState.r = vdUpdate.rotation;
+          }
+        }
+      }
 
       if (vehicle.flags[VEHICLES.SCOPE].captureTokens) {
         for (const vt of vehicleScene.data.tokens) {
@@ -213,12 +288,12 @@ class Vehicles {
             continue;
           }
 
-          requestBatch.updateToken(vehicleScene, {
-            _id: vt._id,
-            x: vt.x + diff.x,
-            y: vt.y + diff.y,
-            rotation: vt.rotation + diff.r,
-          });
+          // TODO: option to not rotate token images.
+          const rDiff = relativeDiff(vehicleCentre, centre, diff);
+          const vtUpdate = updateData(vt, rDiff);
+          requestBatch.updateToken(vehicleScene, vtUpdate);
+          handled[vtId] = true;
+
           const controller = this._controllerMap[this._uniqueId(vehicleScene, vt)];
           if (controller) {
             for (const v of controller.vehicles) {
@@ -227,28 +302,23 @@ class Vehicles {
               if (handled[vdId] || !vehicleState) {
                 continue;
               }
-              requestBatch.updateDrawing(v[0], {
-                _id: v[1]._id,
-                x: v[1].x + diff.x,
-                y: v[1].y + diff.y,
-                rotation: v[1].rotation + diff.r,
-              });
+              const vUpdate = updateData(v[1], rDiff);
+              requestBatch.updateDrawing(v[0], vUpdate);
               queue.push({
                 vehicle: v,
-                x: diff.x,
-                y: diff.y,
-                r: diff.r,
+                x: rDiff.x,
+                y: rDiff.y,
+                r: rDiff.r,
               });
-              vehicleState.x = v[1].x + diff.x;
-              vehicleState.y = v[1].y + diff.y;
-              vehicleState.r = v[1].rotation + diff.r;
+              vehicleState.x = vUpdate.x;
+              vehicleState.y = vUpdate.y;
+              vehicleState.r = vUpdate.rotation;
               handled[vdId] = true;
             }
-            controller.x = vt.x + diff.x;
-            controller.y = vt.y + diff.y;
-            controller.r = vt.rotation + diff.r;
+            controller.x = vtUpdate.x;
+            controller.y = vtUpdate.y;
+            controller.r = vtUpdate.rotation;
           }
-          handled[vtId] = true;
         }
       }
     }
@@ -344,7 +414,6 @@ class Vehicles {
 
     // TODO: better way to identify controller tokens.
     // TODO: auto-capture vs. capture current.
-    // TODO: recursive search to find all things that should be moved, including other controlled tokens and their vehicles at once.
     // TODO: rotate drawing to rotate controls; flip X / Y as well? Does that work? Optional?
     const t = duplicate(token);
     game.multilevel._queueAsync(requestBatch => this._queueVehicleMoveByController(requestBatch, scene, t, controller));

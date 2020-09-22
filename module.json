@@ -6,6 +6,12 @@
   "version": "0.1.0",
   "minimumCoreVersion": "0.6.0",
   "compatibleCoreVersion": "0.6.6",
+  "dependencies": [
+    {
+      "type": "module",
+      "name": "multilevel-tokens"
+    }
+  ],
   "scripts": ["vehicles.js"],
   "url": "https://github.com/grandseiken/foundryvtt-vehicles",
   "manifest": "https://raw.githubusercontent.com/grandseiken/foundryvtt-vehicles/master/module.json",
