@@ -2,6 +2,9 @@ const VEHICLES = {
   SCOPE: "vehicles",
   LOG_PREFIX: "Vehicles | ",
   BYPASS: "vehicles_bypass",
+  CONTROL_SCHEME_ABSOLUTE: 0,
+  CONTROL_SCHEME_TANK: 1,
+  CONTROL_SCHEME_RELATIVE: 2,
 };
 
 class Vehicles {
@@ -35,12 +38,6 @@ class Vehicles {
     <div class="tab" data-tab="vehicles">
       <p class="notes">Use this Drawing to define a vehicle.</p>
       <hr>
-      <div class="form-group">
-        <label for="vehiclesControllerToken">Name of controller token</label>
-        <input type="text" name="vehiclesControllerToken" data-dtype="String"/>
-        <p class="notes">Name of the token that will be used to control this vehicle.</p>
-      </div>
-      <hr>
       <p class="notes">Choose which elements within the Drawing will be moved together as part of the vehicle.</p>
       <div class="form-group">
         <label for="vehiclesCaptureTokens">Capture tokens</label>
@@ -66,6 +63,29 @@ class Vehicles {
         <label for="vehiclesCaptureDrawings">Capture drawings</label>
         <input type="checkbox" name="vehiclesCaptureDrawings" data-dtype="Boolean"/>
       </div>
+      <hr>
+      <div class="form-group">
+        <label for="vehiclesFixTokenOrientation">Fix token orientation</label>
+        <input type="checkbox" name="vehiclesFixTokenOrientation" data-dtype="Boolean"/>
+        <p class="notes">Preserve captured token orientation when moved due to vehicle rotation.</p>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesControllerToken">Name of controller token</label>
+        <input type="text" name="vehiclesControllerToken" data-dtype="String"/>
+        <p class="notes">Name of the token that will be used to control this vehicle.</p>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesControlScheme">Token control scheme</label>
+        <select name="vehiclesControlScheme" data-dtype="Number">
+          <option value="${VEHICLES.CONTROL_SCHEME_ABSOLUTE}">Absolute</option>
+          <option value="${VEHICLES.CONTROL_SCHEME_TANK}">Tank</option>
+          <option value="${VEHICLES.CONTROL_SCHEME_RELATIVE}">Relative</option>
+        </select>
+        <p class="notes">Determines how movement of the controller token translates into movement of the vehicle. <b>Assuming that both vehicle and token begin (unrotated) facing upwards</b>,
+        <b>Absolute</b> means: controller token moves <b>up</b>, vehicle moves <b>up</b>;
+        <b>Tank</b> means: controller token moves <b>up</b>, vehicle moves <b>forwards</b>;
+        <b>Relative</b> means: controller token moves <b>forwards</b>, vehicle moves <b>forwards</b>.</p>
+      </div>
     </div>`;
 
     html.find(".tabs .item").last().after(tab);
@@ -74,6 +94,8 @@ class Vehicles {
     const input = (name) => vehiclesTab.find(`input[name="${name}"]`);
 
     input("vehiclesControllerToken").prop("value", flags.controllerToken);
+    vehiclesTab.find(`select[name="vehiclesControlScheme"]`).val(flags.controlScheme || 0);
+    input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
     input("vehiclesCaptureTokens").prop("checked", flags.captureTokens);
     input("vehiclesCaptureTiles").prop("checked", flags.captureTiles);
     input("vehiclesCaptureWalls").prop("checked", flags.captureWalls);
@@ -108,6 +130,8 @@ class Vehicles {
     };
 
     convertFlag("vehiclesControllerToken", "controllerToken");
+    convertFlag("vehiclesControlScheme", "controlScheme");
+    convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
     convertFlag("vehiclesCaptureTokens", "captureTokens");
     convertFlag("vehiclesCaptureTiles", "captureTiles");
     convertFlag("vehiclesCaptureWalls", "captureWalls");
@@ -124,7 +148,6 @@ class Vehicles {
     if (!drawing.flags || !drawing.flags[VEHICLES.SCOPE]) {
       return false;
     }
-    // TODO
     const flags = drawing.flags[VEHICLES.SCOPE];
     return flags.controllerToken || flags.captureTokens || flags.captureTiles || flags.captureWalls ||
            flags.captureLights || flags.captureSounds || flags.captureDrawings;
@@ -199,6 +222,26 @@ class Vehicles {
     };
   }
 
+  _mapVehicleMoveDirection(controllerToken, vehicle, deltaVector) {
+    const controlScheme = vehicle.flags[VEHICLES.SCOPE].controlScheme;
+    if (controlScheme === VEHICLES.CONTROL_SCHEME_TANK) {
+      return game.multilevel._rotate({x: 0, y: 0}, deltaVector, vehicle.rotation);
+    }
+    if (controlScheme === VEHICLES.CONTROL_SCHEME_RELATIVE) {
+      return game.multilevel._rotate({x: 0, y: 0}, deltaVector, vehicle.rotation - controllerToken.rotation);
+    }
+    return deltaVector;
+  }
+
+  _getUpdateData(object, diff) {
+    return {
+      _id: object._id,
+      x: object.x + diff.x,
+      y: object.y + diff.y,
+      rotation: object.rotation + diff.r,
+    };
+  }
+
   _runVehicleMoveAlgorithm(requestBatch, handled, queue) {
     const relativeDiff = (centre, point, diff) => {
       const result = duplicate(diff);
@@ -206,15 +249,6 @@ class Vehicles {
       result.x += offset.x - point.x;
       result.y += offset.y - point.y;
       return result;
-    };
-
-    const updateData = (object, diff) => {
-      return {
-        _id: object._id,
-        x: object.x + diff.x,
-        y: object.y + diff.y,
-        rotation: object.rotation + diff.r,
-      };
     };
 
     const handleSimpleCapture = (vehicleScene, vehicle, vehicleCentre, diff,
@@ -225,7 +259,7 @@ class Vehicles {
         if (handled[eId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
           continue;
         }
-        updateFunction(updateData(e, relativeDiff(vehicleCentre, centre, diff)));
+        updateFunction(this._getUpdateData(e, relativeDiff(vehicleCentre, centre, diff)));
         handled[eId] = true;
       }
     }
@@ -261,7 +295,7 @@ class Vehicles {
           }
 
           const rDiff = relativeDiff(vehicleCentre, centre, diff);
-          const vdUpdate = updateData(vd, rDiff);
+          const vdUpdate = this._getUpdateData(vd, rDiff);
           requestBatch.updateDrawing(vehicleScene, vdUpdate);
           handled[vdId] = true;
 
@@ -288,9 +322,11 @@ class Vehicles {
             continue;
           }
 
-          // TODO: option to not rotate token images.
           const rDiff = relativeDiff(vehicleCentre, centre, diff);
-          const vtUpdate = updateData(vt, rDiff);
+          if (vehicle.flags[VEHICLES.SCOPE].fixTokenOrientation) {
+            rDiff.r = 0;
+          }
+          const vtUpdate = this._getUpdateData(vt, rDiff);
           requestBatch.updateToken(vehicleScene, vtUpdate);
           handled[vtId] = true;
 
@@ -302,13 +338,17 @@ class Vehicles {
               if (handled[vdId] || !vehicleState) {
                 continue;
               }
-              const vUpdate = updateData(v[1], rDiff);
+              const deltaVector = this._mapVehicleMoveDirection(vt, v[1], {x: rDiff.x, y: rDiff.y});
+              const vDiff = duplicate(rDiff);
+              vDiff.x = deltaVector.x;
+              vDiff.y = deltaVector.y;
+              const vUpdate = this._getUpdateData(v[1], vDiff);
               requestBatch.updateDrawing(v[0], vUpdate);
               queue.push({
                 vehicle: v,
-                x: rDiff.x,
-                y: rDiff.y,
-                r: rDiff.r,
+                x: vDiff.x,
+                y: vDiff.y,
+                r: vDiff.r,
               });
               vehicleState.x = vUpdate.x;
               vehicleState.y = vUpdate.y;
@@ -350,19 +390,26 @@ class Vehicles {
     const queue = [];
 
     for (const v of controller.vehicles) {
-      const diff = {
-        vehicle: v,
+      const vehicleState = this._vehicleMap[this._uniqueId(v[0], v[1])];
+      if (!vehicleState) {
+        continue;
+      }
+      const deltaVector = this._mapVehicleMoveDirection(token, v[1], {
         x: token.x - controller.x,
         y: token.y - controller.y,
+      });
+      const diff = {
+        vehicle: v,
+        x: deltaVector.x,
+        y: deltaVector.y,
         r: token.rotation - controller.r,
       };
+      const update = this._getUpdateData(v[1], diff);
+      vehicleState.x = update.x;
+      vehicleState.y = update.y;
+      vehicleState.r = update.rotation;
       queue.push(diff);
-      requestBatch.updateDrawing(v[0], {
-        _id: v[1]._id,
-        x: v[1].x + diff.x,
-        y: v[1].y + diff.y,
-        rotation: v[1].rotation + diff.r,
-      });
+      requestBatch.updateDrawing(v[0], update);
       handled[this._typedUniqueId("d", v[0], v[1])] = true;
     }
     controller.x = token.x;
