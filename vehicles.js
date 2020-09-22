@@ -21,46 +21,6 @@ class Vehicles {
     this._controllerMap = {};
   }
 
-  _refreshState() {
-    this._refreshControllerMap();
-  }
-
-  _refreshControllerMap() {
-    if (!game.user.isGM) {
-      return;
-    }
-    this._controllerMap = {};
-    for (const scene of game.scenes) {
-      for (const token of scene.data.tokens) {
-        this._refreshControllerMapForToken(scene, token);
-      }
-    }
-  }
-
-  _refreshControllerMapForToken(scene, token) {
-    if (!game.user.isGM) {
-      return;
-    }
-    const id = scene._id + ":" + token._id;
-    delete this._controllerMap[id];
-    for (const vehicleScene of game.scenes) {
-      for (const drawing of vehicleScene.data.drawings) {
-        if (drawing.flags[VEHICLES.SCOPE] &&
-            drawing.flags[VEHICLES.SCOPE].controllerToken === token.name) {
-          if (!this._controllerMap[id]) {
-            this._controllerMap[id] = {
-                x: token.x,
-                y: token.y,
-                r: token.rotation,
-                vehicles: [],
-            };
-          }
-          this._controllerMap[id].vehicles.push([vehicleScene, drawing]);
-        }
-      }
-    }
-  }
-
   _injectDrawingConfigTab(app, html, data) {
     let flags = {};
     if (data.object.flags && data.object.flags[VEHICLES.SCOPE]) {
@@ -157,6 +117,103 @@ class Vehicles {
     }
   }
 
+  _refreshState() {
+    this._refreshControllerMap();
+  }
+
+  _refreshControllerMap() {
+    if (!game.user.isGM) {
+      return;
+    }
+    this._controllerMap = {};
+    for (const scene of game.scenes) {
+      for (const token of scene.data.tokens) {
+        this._refreshControllerMapForToken(scene, token);
+      }
+    }
+  }
+
+  _refreshControllerMapForToken(scene, token) {
+    if (!game.user.isGM) {
+      return;
+    }
+    const id = scene._id + ":" + token._id;
+    delete this._controllerMap[id];
+    for (const vehicleScene of game.scenes) {
+      for (const drawing of vehicleScene.data.drawings) {
+        if (drawing.flags[VEHICLES.SCOPE] &&
+            drawing.flags[VEHICLES.SCOPE].controllerToken === token.name) {
+          if (!this._controllerMap[id]) {
+            this._controllerMap[id] = {
+                x: token.x,
+                y: token.y,
+                r: token.rotation,
+                vehicles: [],
+            };
+          }
+          this._controllerMap[id].vehicles.push([vehicleScene, drawing]);
+        }
+      }
+    }
+  }
+
+  _queueVehicleMove(requestBatch, scene, token, controller) {
+    const handled = {};
+    const queue = [];
+
+    for (const v of controller.vehicles) {
+      queue.push({
+        vehicle: v,
+        x: token.x - controller.x,
+        y: token.y - controller.y,
+        r: 0, // t.rotation - controller.r,
+      });
+      handled["d:" + v[0]._id + ":" + v[1]._id] = true;
+    }
+    controller.x = token.x;
+    controller.y = token.y;
+    controller.r = token.rotation;
+    handled["t:" + scene._id + ":" + token._id] = true;
+
+    for (let i = 0; i < queue.length; ++i) {
+      const diff = queue[i];
+      const [vehicleScene, vehicle] = diff.vehicle;
+      requestBatch.updateDrawing(vehicleScene, {_id: vehicle._id, x: vehicle.x + diff.x, y: vehicle.y + diff.y});
+
+      if (vehicle.flags[VEHICLES.SCOPE].captureTokens) {
+        for (const vt of vehicleScene.data.tokens) {
+          const centre = game.multilevel._getTokenCentre(vehicleScene, vt);
+          const vtId = "t:" + vehicleScene._id + ":" + vt._id;
+          if (handled[vtId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
+            continue;
+          }
+
+          requestBatch.updateToken(vehicleScene, {_id: vt._id, x: vt.x + diff.x, y: vt.y + diff.y});
+          const controller = this._controllerMap[scene._id + ":" + vt._id];
+          if (controller) {
+            for (const v of controller.vehicles) {
+              const vdId = "d:" + v[0]._id + ":" + v[1]._id;
+              if (handled[vdId]) {
+                continue;
+              }
+              queue.push({
+                vehicle: v,
+                x: diff.x,
+                y: diff.y,
+                r: 0, // TODO
+              });
+              handled["d:" + v[0]._id + ":" + v[1]._id] = true;
+            }
+            controller.x = vt.x + diff.x;
+            controller.y = vt.y + diff.y;
+            controller.r = vt.rotation + diff.r;
+          }
+          handled[vtId] = true;
+        }
+      }
+    }
+  }
+
   _onCreateToken(scene, token, options, userId) {
     this._refreshControllerMapForToken(scene, token);
   }
@@ -203,62 +260,7 @@ class Vehicles {
     // TODO: recursive search to find all things that should be moved, including other controlled tokens and their vehicles at once.
     // TODO: rotate drawing to rotate controls; flip X / Y as well? Does that work? Optional?
     const t = duplicate(token);
-    game.multilevel._queueAsync(requestBatch => {
-      const handled = {};
-      const queue = [];
-
-      for (const v of controller.vehicles) {
-        queue.push({
-          vehicle: v,
-          x: t.x - controller.x,
-          y: t.y - controller.y,
-          r: 0, // t.rotation - controller.r,
-        });
-        handled["d:" + v[0]._id + ":" + v[1]._id] = true;
-      }
-      controller.x = t.x;
-      controller.y = t.y;
-      controller.r = t.rotation;
-      handled["t:" + scene._id + ":" + t._id] = true;
-
-      for (let i = 0; i < queue.length; ++i) {
-        const diff = queue[i];
-        const [vehicleScene, vehicle] = diff.vehicle;
-        requestBatch.updateDrawing(vehicleScene, {_id: vehicle._id, x: vehicle.x + diff.x, y: vehicle.y + diff.y});
-
-        if (vehicle.flags[VEHICLES.SCOPE].captureTokens) {
-          for (const vt of vehicleScene.data.tokens) {
-            const centre = game.multilevel._getTokenCentre(vehicleScene, vt);
-            const vtId = "t:" + vehicleScene._id + ":" + vt._id;
-            if (handled[vtId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
-              continue;
-            }
-
-            requestBatch.updateToken(vehicleScene, {_id: vt._id, x: vt.x + diff.x, y: vt.y + diff.y});
-            const controller = this._controllerMap[scene._id + ":" + vt._id];
-            if (controller) {
-              for (const v of controller.vehicles) {
-                const vdId = "d:" + v[0]._id + ":" + v[1]._id;
-                if (handled[vdId]) {
-                  continue;
-                }
-                queue.push({
-                  vehicle: v,
-                  x: diff.x,
-                  y: diff.y,
-                  r: 0, // TODO
-                });
-                handled["d:" + v[0]._id + ":" + v[1]._id] = true;
-              }
-              controller.x = vt.x + diff.x;
-              controller.y = vt.y + diff.y;
-              controller.r = vt.rotation + diff.r;
-            }
-            handled[vtId] = true;
-          }
-        }
-      }
-    });
+    game.multilevel._queueAsync(requestBatch => this._queueVehicleMove(requestBatch, scene, token, controller));
   }
 
   _onPreUpdateDrawing(scene, drawing, update, options, userId) {
