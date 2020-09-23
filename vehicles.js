@@ -2,11 +2,18 @@ const VEHICLES = {
   SCOPE: "vehicles",
   LOG_PREFIX: "Vehicles | ",
   BYPASS: "vehicles_bypass",
+  CAPTURE_NONE: 0,
+  CAPTURE_AUTO: 1,
+  CAPTURE_MANUAL: 2,
   CONTROL_SCHEME_ABSOLUTE: 0,
   CONTROL_SCHEME_TANK: 1,
   CONTROL_SCHEME_RELATIVE: 2,
 };
 
+  // TODO: better way to identify controller tokens?
+  // TODO: finish auto-capture vs. capture current.
+  // TODO: amplification / coefficient / etc
+  // TODO: rename to Vehicles and Mechanisms
 class Vehicles {
   constructor() {
     console.log(VEHICLES.LOG_PREFIX, "Initialized");
@@ -19,12 +26,29 @@ class Vehicles {
     Hooks.on("preUpdateDrawing", this._onPreUpdateDrawing.bind(this));
     Hooks.on("updateDrawing", this._onUpdateDrawing.bind(this));
     Hooks.on("renderDrawingConfig", this._onRenderDrawingConfig.bind(this));
+    Hooks.on("renderDrawingHUD", this._onRenderDrawingHUD.bind(this));
     Hooks.on("ready", this._refreshState.bind(this));
     Hooks.on("createScene", this._refreshState.bind(this));
     Hooks.on("updateScene", this._refreshState.bind(this));
     Hooks.on("deleteScene", this._refreshState.bind(this));
     this._controllerMap = {};
     this._vehicleMap = {};
+  }
+
+  _injectVehicleHUD(hud, html, drawing) {
+    const flags = drawing.flags[VEHICLES.SCOPE];
+    const allCaptures = [flags.captureTokens, flags.captureDrawings, flags.captureTiles,
+                         flags.captureWalls, flags.captureLights, flags.captureSounds];
+    if (!allCaptures.some(c => c === VEHICLES.CAPTURE_MANUAL)) {
+      return;
+    }
+    const icon = `<div class="control-icon vehicles-capture">
+      <img src="icons/svg/target.svg" width="36" height="36" title="Manual Vehicle Capture">
+    </div>
+    <div class="control-icon vehicles-release">
+      <img src="icons/svg/explosion.svg" width="36" height="36" title="Manual Vehicle Release">
+    </div>`;
+    html.find(".col.right .control-icon").last().after(icon);
   }
 
   _injectDrawingConfigTab(app, html, data) {
@@ -34,34 +58,41 @@ class Vehicles {
     }
 
     const tab = `<a class="item" data-tab="vehicles"><i class="fas fa-ship"></i> Vehicles</a>`;
+    const captureOptions = `
+    <option value="${VEHICLES.CAPTURE_NONE}">None</option>
+    <option value="${VEHICLES.CAPTURE_AUTO}">Auto</option>
+    <option value="${VEHICLES.CAPTURE_MANUAL}">Manual</option>
+    `;
     const contents = `
     <div class="tab" data-tab="vehicles">
       <p class="notes">Use this Drawing to define a vehicle.</p>
       <hr>
-      <p class="notes">Choose which elements within the Drawing will be moved together as part of the vehicle.</p>
+      <p class="notes">Choose which elements within the Drawing will be moved together as part of the vehicle.
+      <b>Auto</b> means elements will be captured whenever they lie within the drawing.
+      <b>Manual</b> means elements are only captured if they lie within the drawing when the <b>Capture</b> Drawing HUD option is used.</p>
       <div class="form-group">
         <label for="vehiclesCaptureTokens">Capture tokens</label>
-        <input type="checkbox" name="vehiclesCaptureTokens" data-dtype="Boolean"/>
-      </div>
-      <div class="form-group">
-        <label for="vehiclesCaptureTiles">Capture tiles</label>
-        <input type="checkbox" name="vehiclesCaptureTiles" data-dtype="Boolean"/>
-      </div>
-      <div class="form-group">
-        <label for="vehiclesCaptureWalls">Capture walls</label>
-        <input type="checkbox" name="vehiclesCaptureWalls" data-dtype="Boolean"/>
-      </div>
-      <div class="form-group">
-        <label for="vehiclesCaptureLights">Capture lights</label>
-        <input type="checkbox" name="vehiclesCaptureLights" data-dtype="Boolean"/>
-      </div>
-      <div class="form-group">
-        <label for="vehiclesCaptureSounds">Capture sounds</label>
-        <input type="checkbox" name="vehiclesCaptureSounds" data-dtype="Boolean"/>
+        <select name="vehiclesCaptureTokens" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
         <label for="vehiclesCaptureDrawings">Capture drawings</label>
-        <input type="checkbox" name="vehiclesCaptureDrawings" data-dtype="Boolean"/>
+        <select name="vehiclesCaptureDrawings" data-dtype="Number"/>${captureOptions}</select>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesCaptureTiles">Capture tiles</label>
+        <select name="vehiclesCaptureTiles" data-dtype="Number"/>${captureOptions}</select>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesCaptureWalls">Capture walls</label>
+        <select name="vehiclesCaptureWalls" data-dtype="Number"/>${captureOptions}</select>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesCaptureLights">Capture lights</label>
+        <select name="vehiclesCaptureLights" data-dtype="Number"/>${captureOptions}</select>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesCaptureSounds">Capture sounds</label>
+        <select name="vehiclesCaptureSounds" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <hr>
       <div class="form-group">
@@ -69,6 +100,7 @@ class Vehicles {
         <input type="checkbox" name="vehiclesFixTokenOrientation" data-dtype="Boolean"/>
         <p class="notes">Preserve captured token orientation when moved due to vehicle rotation.</p>
       </div>
+      <hr>
       <div class="form-group">
         <label for="vehiclesControllerToken">Name of controller token</label>
         <input type="text" name="vehiclesControllerToken" data-dtype="String"/>
@@ -92,16 +124,17 @@ class Vehicles {
     html.find(".tab").last().after(contents);
     const vehiclesTab = html.find(".tab").last();
     const input = (name) => vehiclesTab.find(`input[name="${name}"]`);
+    const select = (name) => vehiclesTab.find(`select[name="${name}"]`)
 
     input("vehiclesControllerToken").prop("value", flags.controllerToken);
-    vehiclesTab.find(`select[name="vehiclesControlScheme"]`).val(flags.controlScheme || 0);
+    select("vehiclesControlScheme").val(flags.controlScheme || 0);
     input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
-    input("vehiclesCaptureTokens").prop("checked", flags.captureTokens);
-    input("vehiclesCaptureTiles").prop("checked", flags.captureTiles);
-    input("vehiclesCaptureWalls").prop("checked", flags.captureWalls);
-    input("vehiclesCaptureLights").prop("checked", flags.captureLights);
-    input("vehiclesCaptureSounds").prop("checked", flags.captureSounds);
-    input("vehiclesCaptureDrawings").prop("checked", flags.captureDrawings);
+    select("vehiclesCaptureTokens").val(flags.captureTokens || 0);
+    select("vehiclesCaptureDrawings").val(flags.captureDrawings || 0);
+    select("vehiclesCaptureTiles").val(flags.captureTiles || 0);
+    select("vehiclesCaptureWalls").val(flags.captureWalls || 0);
+    select("vehiclesCaptureLights").val(flags.captureLights || 0);
+    select("vehiclesCaptureSounds").val(flags.captureSounds || 0);
 
     if (!game.multilevel._isUserGamemaster(game.user._id)) {
       vehiclesTab.find("input").prop("disabled", true);
@@ -133,11 +166,11 @@ class Vehicles {
     convertFlag("vehiclesControlScheme", "controlScheme");
     convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
     convertFlag("vehiclesCaptureTokens", "captureTokens");
+    convertFlag("vehiclesCaptureDrawings", "captureDrawings");
     convertFlag("vehiclesCaptureTiles", "captureTiles");
     convertFlag("vehiclesCaptureWalls", "captureWalls");
     convertFlag("vehiclesCaptureLights", "captureLights");
     convertFlag("vehiclesCaptureSounds", "captureSounds");
-    convertFlag("vehiclesCaptureDrawings", "captureDrawings");
 
     if (update.flags && update.flags[VEHICLES.SCOPE] && update.flags[VEHICLES.SCOPE].controllerToken) {
       update.hidden = true;
@@ -149,8 +182,8 @@ class Vehicles {
       return false;
     }
     const flags = drawing.flags[VEHICLES.SCOPE];
-    return flags.controllerToken || flags.captureTokens || flags.captureTiles || flags.captureWalls ||
-           flags.captureLights || flags.captureSounds || flags.captureDrawings;
+    return flags.controllerToken || flags.captureTokens || flags.captureDrawings || flags.captureTiles ||
+           flags.captureWalls ||flags.captureLights || flags.captureSounds;
   }
 
   _uniqueId(scene, object) {
@@ -269,24 +302,24 @@ class Vehicles {
       const [vehicleScene, vehicle] = diff.vehicle;
       const vehicleCentre = game.multilevel._getDrawingCentre(vehicle);
 
-      if (vehicle.flags[VEHICLES.SCOPE].captureTiles) {
+      if (vehicle.flags[VEHICLES.SCOPE].captureTiles === VEHICLES.CAPTURE_AUTO) {
         handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
                             "T", vehicleScene.data.tiles,
                             e => game.multilevel._getDrawingCentre(e),
                             u => requestBatch.updateTile(vehicleScene, u));
       }
-      if (vehicle.flags[VEHICLES.SCOPE].captureLights) {
+      if (vehicle.flags[VEHICLES.SCOPE].captureLights === VEHICLES.CAPTURE_AUTO) {
         handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
                             "l", vehicleScene.data.lights, e => e,
                             u => requestBatch.updateLight(vehicleScene, u));
       }
-      if (vehicle.flags[VEHICLES.SCOPE].captureSounds) {
+      if (vehicle.flags[VEHICLES.SCOPE].captureSounds === VEHICLES.CAPTURE_AUTO) {
         handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
                             "s", vehicleScene.data.sounds, e => e,
                             u => requestBatch.updateSound(vehicleScene, u));
       }
 
-      if (vehicle.flags[VEHICLES.SCOPE].captureDrawings) {
+      if (vehicle.flags[VEHICLES.SCOPE].captureDrawings === VEHICLES.CAPTURE_AUTO) {
         for (const vd of vehicleScene.data.drawings) {
           const centre = game.multilevel._getDrawingCentre(vd);
           const vdId = this._typedUniqueId("d", vehicleScene, vd);
@@ -314,7 +347,7 @@ class Vehicles {
         }
       }
 
-      if (vehicle.flags[VEHICLES.SCOPE].captureTokens) {
+      if (vehicle.flags[VEHICLES.SCOPE].captureTokens === VEHICLES.CAPTURE_AUTO) {
         for (const vt of vehicleScene.data.tokens) {
           const centre = game.multilevel._getTokenCentre(vehicleScene, vt);
           const vtId = this._typedUniqueId("t", vehicleScene, vt);
@@ -459,9 +492,6 @@ class Vehicles {
       return;
     }
 
-    // TODO: better way to identify controller tokens.
-    // TODO: auto-capture vs. capture current.
-    // TODO: rotate drawing to rotate controls; flip X / Y as well? Does that work? Optional?
     const t = duplicate(token);
     game.multilevel._queueAsync(requestBatch => this._queueVehicleMoveByController(requestBatch, scene, t, controller));
   }
@@ -512,6 +542,12 @@ class Vehicles {
   _onRenderDrawingConfig(app, html, data) {
     if (game.multilevel._isAuthorisedRegion(data.object)) {
       this._injectDrawingConfigTab(app, html, data);
+    }
+  }
+
+  _onRenderDrawingHUD(hud, html, drawing) {
+    if (game.multilevel._isAuthorisedRegion(drawing) && this._isVehicle(drawing)) {
+      this._injectVehicleHUD(hud, html, drawing);
     }
   }
 }
