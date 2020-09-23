@@ -19,6 +19,8 @@
   "VEHICLES.FieldFixTokenOrientationNotes": "Preserve captured token orientation when moved due to vehicle rotation.",
   "VEHICLES.FieldControllerToken": "Name of controller token",
   "VEHICLES.FieldControllerTokenNotes": "<b>Exact</b> name of the token that will be used to control this vehicle.",
+  "VEHICLES.FieldPivotToken": "Name of pivot token",
+  "VEHICLES.FieldPivotTokenNotes": "<b>Exact</b> name of the token that will be used as a pivot point for the vehicle when the controller token rotates. This may be the same as the controller token, in which case the vehicle will rotate about the controller token itself. Leave blank to use the centre of the drawing as the pivot point.",
   "VEHICLES.FieldTokenControlScheme": "Token control scheme",
   "VEHICLES.TokenControlSchemeOptionAbsolute": "Absolute",
   "VEHICLES.TokenControlSchemeOptionTank": "Tank",

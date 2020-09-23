@@ -12,11 +12,10 @@ const VEHICLES = {
 };
 
 // TODO: implement Walls
-// TODO: better way to identify controller tokens?
+// TODO: better way to identify controller/pivot tokens?
 // TOOD: option for tokens to collide with walls
 // - Maybe also to halt movement of vehicle?
 // TODO: do angles need clamping
-// TODO: pivot point. Use controller token as pivot point?
 class Vehicles {
   constructor() {
     console.log(VEHICLES.LOG_PREFIX, "Initialized");
@@ -149,6 +148,11 @@ class Vehicles {
         <p class="notes">${game.i18n.localize("VEHICLES.FieldControllerTokenNotes")}</p>
       </div>
       <div class="form-group">
+        <label for="vehiclesPivotToken">${game.i18n.localize("VEHICLES.FieldPivotToken")}</label>
+        <input type="text" name="vehiclesPivotToken" data-dtype="String"/>
+        <p class="notes">${game.i18n.localize("VEHICLES.FieldPivotTokenNotes")}</p>
+      </div>
+      <div class="form-group">
         <label for="vehiclesControlScheme">${game.i18n.localize("VEHICLES.FieldTokenControlScheme")}</label>
         <select name="vehiclesControlScheme" data-dtype="Number">
           <option value="${VEHICLES.CONTROL_SCHEME_ABSOLUTE}">${game.i18n.localize("VEHICLES.TokenControlSchemeOptionAbsolute")}</option>
@@ -180,6 +184,7 @@ class Vehicles {
 
     input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
     input("vehiclesControllerToken").prop("value", flags.controllerToken);
+    input("vehiclesPivotToken").prop("value", flags.pivotToken);
     select("vehiclesControlScheme").val(flags.controlScheme || 0);
     input("vehiclesXCoefficient").prop("value", "xCoefficient" in flags ? flags.xCoefficient : 1);
     input("vehiclesYCoefficient").prop("value", "yCoefficient" in flags ? flags.yCoefficient : 1);
@@ -220,6 +225,7 @@ class Vehicles {
 
     convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
     convertFlag("vehiclesControllerToken", "controllerToken");
+    convertFlag("vehiclesPivotToken", "pivotToken");
     convertFlag("vehiclesControlScheme", "controlScheme");
     convertFlag("vehiclesXCoefficient", "xCoefficient");
     convertFlag("vehiclesYCoefficient", "yCoefficient");
@@ -378,6 +384,32 @@ class Vehicles {
     return capture;
   }
 
+  _getPivotCompensationForVehicleRotation(scene, vehicle, rotation) {
+    if (!rotation || !vehicle.flags || !vehicle.flags[VEHICLES.SCOPE]) {
+      return {x: 0, y: 0};
+    }
+    const flags = vehicle.flags[VEHICLES.SCOPE];
+    const pivotToken = flags.pivotToken;
+    if (!pivotToken) {
+      return {x: 0, y: 0};
+    }
+    const points = scene.data.tokens
+        .filter(t => t.name === pivotToken)
+        .map(t => game.multilevel._getTokenCentre(scene, t));
+    if (!points) {
+      return {x: 0, y: 0};
+    }
+    const vehicleCentre = game.multilevel._getDrawingCentre(vehicle);
+    const distanceSq = (a, b) => (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
+    const pivotPoint = points.reduce((a, b) =>
+        distanceSq(a, vehicleCentre) <= distanceSq(b, vehicleCentre) ? a : b);
+    const rotatedPoint = game.multilevel._rotate(vehicleCentre, pivotPoint, rotation);
+    return {
+      x: pivotPoint.x - rotatedPoint.x,
+      y: pivotPoint.y - rotatedPoint.y,
+    };
+  }
+
   _mapVehicleMoveDirection(controllerToken, vehicle, diff) {
     const flags = vehicle.flags[VEHICLES.SCOPE];
     const controlScheme = flags.controlScheme;
@@ -491,6 +523,9 @@ class Vehicles {
               continue;
             }
             const vDiff = this._mapVehicleMoveDirection(vt, v[1], rDiff);
+            const pivot = this._getPivotCompensationForVehicleRotation(v[0], v[1], vDiff.r);
+            vDiff.x += pivot.x;
+            vDiff.y += pivot.y;
             const vUpdate = this._getUpdateData(v[1], vDiff);
             requestBatch.updateDrawing(v[0], vUpdate);
             queue.push({
@@ -547,10 +582,11 @@ class Vehicles {
         y: token.y - controller.y,
         r: token.rotation - controller.r,
       });
+      const pivot = this._getPivotCompensationForVehicleRotation(v[0], v[1], deltaVector.r);
       const diff = {
         vehicle: v,
-        x: deltaVector.x,
-        y: deltaVector.y,
+        x: deltaVector.x + pivot.x,
+        y: deltaVector.y + pivot.y,
         r: deltaVector.r,
       };
       const update = this._getUpdateData(v[1], diff);
@@ -561,10 +597,16 @@ class Vehicles {
       requestBatch.updateDrawing(v[0], update);
       handled[this._typedUniqueId("d", v[0], v[1])] = true;
     }
+    // Somewhat special case: if the controller token was only rotated, it may still be moved by the vehicle.
+    // If it moved, it should not be moved by the vehicle, or it could end up moving twice, which is probably
+    // not what anyone wants.
+    // Might need revisiting in future.
+    if (token.x !== controller.x || token.y !== controller.y) {
+      handled[this._typedUniqueId("t", scene, token)] = true;
+    }
     controller.x = token.x;
     controller.y = token.y;
     controller.r = token.rotation;
-    handled[this._typedUniqueId("t", scene, token)] = true;
     this._runVehicleMoveAlgorithm(requestBatch, handled, queue);
   }
 
