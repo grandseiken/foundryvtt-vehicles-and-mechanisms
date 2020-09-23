@@ -1,4 +1,4 @@
-# Vehicles module for Foundry VTT
+# Vehicles and Mechanisms module for Foundry VTT
 
 ## Installation
 

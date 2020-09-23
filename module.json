@@ -1,6 +1,6 @@
 {
-  "name": "vehicles",
-  "title": "Vehicles",
+  "name": "vehicles-and-mechanisms",
+  "title": "Vehicles and Mechanisms",
   "description": "<p>TODO</p><p>See page at URL below for full usage instructions.</p>",
   "author": "grandseiken",
   "version": "0.1.0",
@@ -13,7 +13,7 @@
     }
   ],
   "scripts": ["vehicles.js"],
-  "url": "https://github.com/grandseiken/foundryvtt-vehicles",
-  "manifest": "https://raw.githubusercontent.com/grandseiken/foundryvtt-vehicles/master/module.json",
-  "download": "https://github.com/grandseiken/foundryvtt-vehicles/archive/v0.1.0.zip"
+  "url": "https://github.com/grandseiken/foundryvtt-vehicles-and-mechanisms",
+  "manifest": "https://raw.githubusercontent.com/grandseiken/foundryvtt-vehicles-and-mechanisms/master/module.json",
+  "download": "https://github.com/grandseiken/foundryvtt-vehicles-and-mechanisms/archive/v0.1.0.zip"
 }

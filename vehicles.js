@@ -1,7 +1,7 @@
 
 const VEHICLES = {
   SCOPE: "vehicles",
-  LOG_PREFIX: "Vehicles | ",
+  LOG_PREFIX: "Vehicles and Mechanisms | ",
   BYPASS: "vehicles_bypass",
   CAPTURE_NONE: 0,
   CAPTURE_AUTO: 1,
@@ -14,7 +14,6 @@ const VEHICLES = {
 // TODO: better way to identify controller tokens?
 // TOOD: option for tokens to collide with walls
 // - Maybe also to halt movement of vehicle?
-// TODO: rename to Vehicles and Mechanisms
 // TODO: implement Walls
 // TODO: do angles need clamping
 // TODO: localization
