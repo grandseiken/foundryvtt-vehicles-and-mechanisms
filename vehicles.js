@@ -11,11 +11,11 @@ const VEHICLES = {
   CONTROL_SCHEME_RELATIVE: 2,
 };
 
-// TODO: implement Walls
-// TODO: better way to identify controller/pivot tokens?
-// TOOD: option for tokens to collide with walls
-// - Maybe also to halt movement of vehicle?
-// TODO: do angles need clamping
+// TODO: implement walls.
+// TOOD: option for tokens to collide with walls. Maybe also to halt movement of vehicle?
+// TODO: better system for linking up controller and pivot tokens?
+// TODO: do angles need clamping?
+// TODO: interaction with teleports. Option for vehicle to move when controller token teleports?
 class Vehicles {
   constructor() {
     console.log(VEHICLES.LOG_PREFIX, "Initialized");
@@ -339,7 +339,8 @@ class Vehicles {
     const flags = vehicle.flags[VEHICLES.SCOPE];
     return {
       tokens: flags.captureTokens === captureType
-          ? scene.data.tokens.filter(e => game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle))
+          ? scene.data.tokens.filter(e => !game.multilevel._isReplicatedToken(e) &&
+                                          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle))
           : [],
       drawings: flags.captureDrawings === captureType
           ? scene.data.drawings.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
@@ -494,9 +495,6 @@ class Vehicles {
             y: rDiff.y,
             r: rDiff.r,
           });
-          subVehicleState.x = vdUpdate.x;
-          subVehicleState.y = vdUpdate.y;
-          subVehicleState.r = vdUpdate.rotation;
         }
       }
 
@@ -534,66 +532,42 @@ class Vehicles {
               y: vDiff.y,
               r: vDiff.r,
             });
-            vehicleState.x = vUpdate.x;
-            vehicleState.y = vUpdate.y;
-            vehicleState.r = vUpdate.rotation;
             handled[vdId] = true;
           }
-          controller.x = vtUpdate.x;
-          controller.y = vtUpdate.y;
-          controller.r = vtUpdate.rotation;
         }
       }
     }
   }
 
-  _queueVehicleMoveByDrawing(requestBatch, scene, drawing, vehicleState) {
+  _queueVehicleMoveByDrawing(requestBatch, scene, drawing, diff) {
     const handled = {};
     const queue = [];
 
-    const copy = duplicate(drawing);
-    copy.x = vehicleState.x;
-    copy.y = vehicleState.y;
-    copy.rotation = vehicleState.rotation;
-    queue.push({
-      vehicle: [scene, copy],
-      x: drawing.x - vehicleState.x,
-      y: drawing.y - vehicleState.y,
-      r: drawing.rotation - vehicleState.r,
-    });
-    vehicleState.x = drawing.x;
-    vehicleState.y = drawing.y;
-    vehicleState.r = drawing.rotation;
+    drawing.x -= diff.x;
+    drawing.y -= diff.y;
+    drawing.rotation -= diff.r;
+    diff.vehicle = [scene, drawing];
+    queue.push(diff);
     handled[this._typedUniqueId("d", scene, drawing)] = true;
     this._runVehicleMoveAlgorithm(requestBatch, handled, queue);
   }
 
-  _queueVehicleMoveByController(requestBatch, scene, token, controller) {
+  _queueVehicleMoveByController(requestBatch, scene, token, vehicles, diff) {
     const handled = {};
     const queue = [];
 
-    for (const v of controller.vehicles) {
+    for (const v of vehicles) {
       const vehicleState = this._vehicleMap[this._uniqueId(v[0], v[1])];
       if (!vehicleState) {
         continue;
       }
-      const deltaVector = this._mapVehicleMoveDirection(token, v[1], {
-        x: token.x - controller.x,
-        y: token.y - controller.y,
-        r: token.rotation - controller.r,
-      });
-      const pivot = this._getPivotCompensationForVehicleRotation(v[0], v[1], deltaVector.r);
-      const diff = {
-        vehicle: v,
-        x: deltaVector.x + pivot.x,
-        y: deltaVector.y + pivot.y,
-        r: deltaVector.r,
-      };
-      const update = this._getUpdateData(v[1], diff);
-      vehicleState.x = update.x;
-      vehicleState.y = update.y;
-      vehicleState.r = update.rotation;
-      queue.push(diff);
+      const vDiff = this._mapVehicleMoveDirection(token, v[1], diff);
+      const pivot = this._getPivotCompensationForVehicleRotation(v[0], v[1], vDiff.r);
+      vDiff.vehicle = v;
+      vDiff.x += pivot.x;
+      vDiff.y += pivot.y;
+      const update = this._getUpdateData(v[1], vDiff);
+      queue.push(vDiff);
       requestBatch.updateDrawing(v[0], update);
       handled[this._typedUniqueId("d", v[0], v[1])] = true;
     }
@@ -601,12 +575,9 @@ class Vehicles {
     // If it moved, it should not be moved by the vehicle, or it could end up moving twice, which is probably
     // not what anyone wants.
     // Might need revisiting in future.
-    if (token.x !== controller.x || token.y !== controller.y) {
+    if (diff.x || diff.y) {
       handled[this._typedUniqueId("t", scene, token)] = true;
     }
-    controller.x = token.x;
-    controller.y = token.y;
-    controller.r = token.rotation;
     this._runVehicleMoveAlgorithm(requestBatch, handled, queue);
   }
 
@@ -651,7 +622,16 @@ class Vehicles {
     }
 
     const t = duplicate(token);
-    game.multilevel._queueAsync(requestBatch => this._queueVehicleMoveByController(requestBatch, scene, t, controller));
+    const diff = {
+      x: token.x - controller.x,
+      y: token.y - controller.y,
+      r: token.rotation - controller.r,
+    };
+    game.multilevel._queueAsync(requestBatch =>
+        this._queueVehicleMoveByController(requestBatch, scene, t, controller.vehicles, diff));
+    controller.x = token.x;
+    controller.y = token.y;
+    controller.r = token.rotation;
   }
 
   _onCreateDrawing(scene, drawing, options, userId) {
@@ -686,15 +666,25 @@ class Vehicles {
     if (update.flags && update.flags[VEHICLES.SCOPE] && "controllerToken" in update.flags[VEHICLES.SCOPE]) {
       this._refreshControllerMap();
     }
-    if (!this._vehicleMap[id] || !game.multilevel._isPrimaryGamemaster() ||
+    const vehicleState = this._vehicleMap[id];
+    if (!vehicleState || !game.multilevel._isPrimaryGamemaster() ||
         MLT.REPLICATED_UPDATE in options || VEHICLES.BYPASS in options ||
         !("x" in update || "y" in update || "rotation" in update)) {
       this._refreshVehicleMapForVehicle(scene, drawing);
       return;
     }
+
     const d = duplicate(drawing);
+    const diff = {
+      x: drawing.x - vehicleState.x,
+      y: drawing.y - vehicleState.y,
+      r: drawing.rotation - vehicleState.r,
+    };
     game.multilevel._queueAsync(requestBatch =>
-        this._queueVehicleMoveByDrawing(requestBatch, scene, d, this._vehicleMap[id]));
+        this._queueVehicleMoveByDrawing(requestBatch, scene, d, diff));
+    vehicleState.x = drawing.x;
+    vehicleState.y = drawing.y;
+    vehicleState.r = drawing.rotation;
   }
 
   _onRenderDrawingConfig(app, html, data) {
