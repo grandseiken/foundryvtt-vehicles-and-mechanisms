@@ -12,11 +12,11 @@ const VEHICLES = {
 };
 
 // TODO: implement Walls
-// TODO: localization
 // TODO: better way to identify controller tokens?
 // TOOD: option for tokens to collide with walls
 // - Maybe also to halt movement of vehicle?
 // TODO: do angles need clamping
+// TODO: pivot point. Use controller token as pivot point?
 class Vehicles {
   constructor() {
     console.log(VEHICLES.LOG_PREFIX, "Initialized");
@@ -49,10 +49,10 @@ class Vehicles {
       return;
     }
     const icon = `<div class="control-icon vehicles-capture">
-      <img src="icons/svg/target.svg" width="36" height="36" title="Manual Vehicle Capture">
+      <img src="icons/svg/target.svg" width="36" height="36" title="${game.i18n.localize("VEHICLES.IconCaptureNow")}">
     </div>
     <div class="control-icon vehicles-release">
-      <img src="icons/svg/explosion.svg" width="36" height="36" title="Manual Vehicle Release">
+      <img src="icons/svg/explosion.svg" width="36" height="36" title="${game.i18n.localize("VEHICLES.IconReleaseAll")}">
     </div>`;
     html.find(".col.right .control-icon").last().after(icon);
     html.find(".vehicles-capture").click(async () => {
@@ -72,7 +72,7 @@ class Vehicles {
         },
       };
       await object.update(update);
-      ui.notifications.info(`${count} objects captured.`);
+      ui.notifications.info(game.i18n.format("VEHICLES.NotificationObjectsCaptured", {count: count}));
     });
     html.find(".vehicles-release").click(async () => {
       const currentDrawing = object.scene.data.drawings.find(d => d._id === drawing._id);
@@ -91,7 +91,7 @@ class Vehicles {
         capture: {tokens: [], drawings: [], tiles: [], walls: [], lights: [], sounds: []},
       };
       await object.update(update);
-      ui.notifications.info(`${count} objects released.`);
+      ui.notifications.info(game.i18n.format("VEHICLES.NotificationObjectsReleased", {count: count}));
     });
   }
 
@@ -101,80 +101,75 @@ class Vehicles {
       flags = data.object.flags[VEHICLES.SCOPE];
     }
 
-    const tab = `<a class="item" data-tab="vehicles"><i class="fas fa-ship"></i> Vehicles</a>`;
+    const tab = `<a class="item" data-tab="vehicles"><i class="fas fa-ship"></i> ${game.i18n.localize("VEHICLES.TabTitle")}</a>`;
     const captureOptions = `
-    <option value="${VEHICLES.CAPTURE_NONE}">None</option>
-    <option value="${VEHICLES.CAPTURE_AUTO}">Auto</option>
-    <option value="${VEHICLES.CAPTURE_MANUAL}">Manual</option>
+    <option value="${VEHICLES.CAPTURE_NONE}">${game.i18n.localize("VEHICLES.CaptureOptionNone")}</option>
+    <option value="${VEHICLES.CAPTURE_AUTO}">${game.i18n.localize("VEHICLES.CaptureOptionAuto")}</option>
+    <option value="${VEHICLES.CAPTURE_MANUAL}">${game.i18n.localize("VEHICLES.CaptureOptionManual")}</option>
     `;
     const contents = `
     <div class="tab" data-tab="vehicles">
-      <p class="notes">Use this Drawing to define a vehicle.</p>
+      <p class="notes">${game.i18n.localize("VEHICLES.TabNotes")}</p>
       <hr>
-      <p class="notes">Choose which elements within the Drawing will be moved together as part of the vehicle.
-      <b>Auto</b> means elements will be captured whenever they lie within the drawing.
-      <b>Manual</b> means elements are only captured if they lie within the drawing when the <b>Manual Vehicle Capture</b> Drawing HUD option is used.</p>
+      <p class="notes">${game.i18n.localize("VEHICLES.SectionCaptureNotes")}</p>
       <div class="form-group">
-        <label for="vehiclesCaptureTokens">Capture tokens</label>
+        <label for="vehiclesCaptureTokens">${game.i18n.localize("VEHICLES.FieldCaptureTokens")}</label>
         <select name="vehiclesCaptureTokens" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureDrawings">Capture drawings</label>
+        <label for="vehiclesCaptureDrawings">${game.i18n.localize("VEHICLES.FieldCaptureDrawings")}</label>
         <select name="vehiclesCaptureDrawings" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureTiles">Capture tiles</label>
+        <label for="vehiclesCaptureTiles">${game.i18n.localize("VEHICLES.FieldCaptureTiles")}</label>
         <select name="vehiclesCaptureTiles" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureWalls">Capture walls</label>
+        <label for="vehiclesCaptureWalls">${game.i18n.localize("VEHICLES.FieldCaptureWalls")}</label>
         <select name="vehiclesCaptureWalls" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureLights">Capture lights</label>
+        <label for="vehiclesCaptureLights">${game.i18n.localize("VEHICLES.FieldCaptureLights")}</label>
         <select name="vehiclesCaptureLights" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureSounds">Capture sounds</label>
+        <label for="vehiclesCaptureSounds">${game.i18n.localize("VEHICLES.FieldCaptureSounds")}</label>
         <select name="vehiclesCaptureSounds" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <hr>
       <div class="form-group">
-        <label for="vehiclesFixTokenOrientation">Fix token orientation</label>
+        <label for="vehiclesFixTokenOrientation">${game.i18n.localize("VEHICLES.FieldFixTokenOrientation")}</label>
         <input type="checkbox" name="vehiclesFixTokenOrientation" data-dtype="Boolean"/>
-        <p class="notes">Preserve captured token orientation when moved due to vehicle rotation.</p>
+        <p class="notes">${game.i18n.localize("VEHICLES.FieldFixTokenOrientationNotes")}</p>
       </div>
       <hr>
       <div class="form-group">
-        <label for="vehiclesControllerToken">Name of controller token</label>
+        <label for="vehiclesControllerToken">${game.i18n.localize("VEHICLES.FieldControllerToken")}</label>
         <input type="text" name="vehiclesControllerToken" data-dtype="String"/>
-        <p class="notes">Name of the token that will be used to control this vehicle.</p>
+        <p class="notes">${game.i18n.localize("VEHICLES.FieldControllerTokenNotes")}</p>
       </div>
       <div class="form-group">
-        <label for="vehiclesControlScheme">Token control scheme</label>
+        <label for="vehiclesControlScheme">${game.i18n.localize("VEHICLES.FieldTokenControlScheme")}</label>
         <select name="vehiclesControlScheme" data-dtype="Number">
-          <option value="${VEHICLES.CONTROL_SCHEME_ABSOLUTE}">Absolute</option>
-          <option value="${VEHICLES.CONTROL_SCHEME_TANK}">Tank</option>
-          <option value="${VEHICLES.CONTROL_SCHEME_RELATIVE}">Relative</option>
+          <option value="${VEHICLES.CONTROL_SCHEME_ABSOLUTE}">${game.i18n.localize("VEHICLES.TokenControlSchemeOptionAbsolute")}</option>
+          <option value="${VEHICLES.CONTROL_SCHEME_TANK}">${game.i18n.localize("VEHICLES.TokenControlSchemeOptionTank")}</option>
+          <option value="${VEHICLES.CONTROL_SCHEME_RELATIVE}">${game.i18n.localize("VEHICLES.TokenControlSchemeOptionRelative")}</option>
         </select>
-        <p class="notes">Determines how movement of the controller token translates into movement of the vehicle. <b>Assuming that both vehicle and token begin (unrotated) facing upwards</b>,
-        <b>Absolute</b> means: controller token moves <b>up</b>, vehicle moves <b>up</b>;
-        <b>Tank</b> means: controller token moves <b>up</b>, vehicle moves <b>forwards</b>;
-        <b>Relative</b> means: controller token moves <b>forwards</b>, vehicle moves <b>forwards</b>.</p>
+        <p class="notes">${game.i18n.localize("VEHICLES.FieldTokenControlSchemeNotes")}</p>
       </div>
       <div class="form-group">
-        <label for="vehiclesXCoefficient">X-coefficient</label>
+        <label for="vehiclesXCoefficient">${game.i18n.localize("VEHICLES.FieldXCoefficient")}</label>
         <input type="text" name="vehiclesXCoefficient" value="1" data-dtype="Number"/>
       </div>
       <div class="form-group">
-        <label for="vehiclesYCoefficient">Y-coefficient</label>
+        <label for="vehiclesYCoefficient">${game.i18n.localize("VEHICLES.FieldYCoefficient")}</label>
         <input type="text" name="vehiclesYCoefficient" value="1" data-dtype="Number"/>
       </div>
       <div class="form-group">
-        <label for="vehiclesAngularCoefficient">Angular coefficient</label>
+        <label for="vehiclesAngularCoefficient">${game.i18n.localize("VEHICLES.FieldAngularCoefficient")}</label>
         <input type="text" name="vehiclesAngularCoefficient" value="1" data-dtype="Number"/>
       </div>
-      <p class="notes">These values are used to scale movement of the controller token in the X-direction, the Y-direction, and its rotation, respectively, before the movement is applied to the vehicle. They can be any positive or negative decimal value.</p>
+      <p class="notes">${game.i18n.localize("VEHICLES.SectionCoefficientsNotes")}</p>
     </div>`;
 
     html.find(".tabs .item").last().after(tab);

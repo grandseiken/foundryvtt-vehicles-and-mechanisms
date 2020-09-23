@@ -27,6 +27,7 @@ The advantages of using controller tokens are:
 * By granting players control of the controller token, they can be used to give your players control of a vehicle.
 * A single controller token may be associated with multiple vehicles. This allows several vehicles to be controlled at once with a single input.
 * The controller token need not be placed within the vehicle itself. This allows a vehicle to be controlled remotely, even from another scene.
+* Moving the vehicle drawing always translates directly to movement of elements captured by the vehicle. On the other hand, the way in which a controller token's movement translates to movement of the vehicle can be customized in various different ways (see below).
 * A vehicle's movement may cause a controller token to move, causing another vehicle to also move, and so on. I am sure somebody will find a way to devise elaborate contraptions.
 
 # Version history
