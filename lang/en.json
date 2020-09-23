@@ -17,6 +17,8 @@
   "VEHICLES.CaptureOptionManual": "Manual",
   "VEHICLES.FieldFixTokenOrientation": "Fix token orientation",
   "VEHICLES.FieldFixTokenOrientationNotes": "Preserve captured token orientation when moved due to vehicle rotation.",
+  "VEHICLES.FieldWallCollision": "Wall collision",
+  "VEHICLES.FieldWallCollisionNotes": "Tokens moved by the vehicle collide with walls that are not part of the vehicle.",
   "VEHICLES.FieldControllerToken": "Name of controller token",
   "VEHICLES.FieldControllerTokenNotes": "<b>Exact</b> name of the token that will be used to control this vehicle.",
   "VEHICLES.FieldPivotToken": "Name of pivot token",

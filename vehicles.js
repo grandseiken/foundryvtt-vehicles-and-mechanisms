@@ -11,8 +11,6 @@ const VEHICLES = {
   CONTROL_SCHEME_RELATIVE: 2,
 };
 
-// TODO: implement walls.
-// TOOD: option for tokens to collide with walls. Maybe also to halt movement of vehicle?
 // TODO: better system for linking up controller and pivot tokens?
 // TODO: do angles need clamping?
 // TODO: interaction with teleports. Option for vehicle to move when controller token teleports?
@@ -141,6 +139,11 @@ class Vehicles {
         <input type="checkbox" name="vehiclesFixTokenOrientation" data-dtype="Boolean"/>
         <p class="notes">${game.i18n.localize("VEHICLES.FieldFixTokenOrientationNotes")}</p>
       </div>
+      <div class="form-group">
+        <label for="vehiclesWallCollision">${game.i18n.localize("VEHICLES.FieldWallCollision")}</label>
+        <input type="checkbox" name="vehiclesWallCollision" data-dtype="Boolean"/>
+        <p class="notes">${game.i18n.localize("VEHICLES.FieldWallCollisionNotes")}</p>
+      </div>
       <hr>
       <div class="form-group">
         <label for="vehiclesControllerToken">${game.i18n.localize("VEHICLES.FieldControllerToken")}</label>
@@ -183,6 +186,7 @@ class Vehicles {
     const select = (name) => vehiclesTab.find(`select[name="${name}"]`)
 
     input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
+    input("vehiclesWallCollision").prop("checked", flags.wallCollision);
     input("vehiclesControllerToken").prop("value", flags.controllerToken);
     input("vehiclesPivotToken").prop("value", flags.pivotToken);
     select("vehiclesControlScheme").val(flags.controlScheme || 0);
@@ -224,6 +228,7 @@ class Vehicles {
     };
 
     convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
+    convertFlag("vehiclesWallCollision", "wallCollision");
     convertFlag("vehiclesControllerToken", "controllerToken");
     convertFlag("vehiclesPivotToken", "pivotToken");
     convertFlag("vehiclesControlScheme", "controlScheme");
@@ -348,7 +353,10 @@ class Vehicles {
       tiles: flags.captureTiles === captureType
           ? scene.data.tiles.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
           : [],
-      walls: [],
+      walls: flags.captureWalls === captureType
+          ? scene.data.walls.filter(e => game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
+                                         game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle))
+          : [],
       lights: flags.captureLights === captureType
           ? scene.data.lights.filter(e => game.multilevel._isPointInRegion(e, vehicle))
           : [],
@@ -365,22 +373,33 @@ class Vehicles {
       return capture;
     }
     if (flags.captureTokens === VEHICLES.CAPTURE_MANUAL && flags.capture.tokens) {
-      capture.tokens = scene.data.tokens.filter(e => flags.capture.tokens.includes(e._id));
+      capture.tokens = scene.data.tokens.filter(e =>
+          flags.capture.tokens.includes(e._id) &&
+          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle));
     }
     if (flags.captureDrawings === VEHICLES.CAPTURE_MANUAL && flags.capture.drawings) {
-      capture.drawings = scene.data.drawings.filter(e => flags.capture.drawings.includes(e._id));
+      capture.drawings = scene.data.drawings.filter(e =>
+          flags.capture.drawings.includes(e._id) &&
+          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle));
     }
     if (flags.captureTiles === VEHICLES.CAPTURE_MANUAL && flags.capture.tiles) {
-      capture.tiles = scene.data.tiles.filter(e => flags.capture.tiles.includes(e._id));
+      capture.tiles = scene.data.tiles.filter(e =>
+          flags.capture.tiles.includes(e._id) &&
+          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle));
     }
     if (flags.captureWalls === VEHICLES.CAPTURE_MANUAL && flags.capture.walls) {
-      capture.walls = scene.data.walls.filter(e => flags.capture.walls.includes(e._id));
+      capture.walls = scene.data.walls.filter(e =>
+          flags.capture.walls.includes(e._id) &&
+          game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
+          game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle));
     }
     if (flags.captureLights === VEHICLES.CAPTURE_MANUAL && flags.capture.lights) {
-      capture.lights = scene.data.lights.filter(e => flags.capture.lights.includes(e._id));
+      capture.lights = scene.data.lights.filter(e =>
+          flags.capture.lights.includes(e._id) && game.multilevel._isPointInRegion(e, vehicle));
     }
     if (flags.captureSounds === VEHICLES.CAPTURE_MANUAL && flags.capture.sounds) {
-      capture.sounds = scene.data.sounds.filter(e => flags.capture.sounds.includes(e._id));
+      capture.sounds = scene.data.sounds.filter(e =>
+          flags.capture.sounds.includes(e._id) && game.multilevel._isPointInRegion(e, vehicle));
     }
     return capture;
   }
@@ -476,6 +495,19 @@ class Vehicles {
                           "s", capture.sounds, e => e,
                           u => requestBatch.updateSound(vehicleScene, u));
 
+      for (const vw of capture.walls) {
+        const wId = this._typedUniqueId("w", vehicleScene, vw);
+        if (!handled[wId]) {
+          const aDiff = relativeDiff(vehicleCentre, {x: vw.c[0], y: vw.c[1]}, diff);
+          const bDiff = relativeDiff(vehicleCentre, {x: vw.c[2], y: vw.c[3]}, diff);
+          requestBatch.updateWall(vehicleScene, {
+            _id: vw._id,
+            c: [vw.c[0] + aDiff.x, vw.c[1] + aDiff.y, vw.c[2] + bDiff.x, vw.c[3] + bDiff.y],
+          });
+          handled[wId] = true;
+        }
+      }
+
       for (const vd of capture.drawings) {
         const vdId = this._typedUniqueId("d", vehicleScene, vd);
         if (handled[vdId]) {
@@ -498,15 +530,65 @@ class Vehicles {
         }
       }
 
+      const walls = [];
+      if (capture.tokens.length && vehicle.flags[VEHICLES.SCOPE].wallCollision) {
+        for (const wall of vehicleScene.data.walls) {
+          if (!capture.walls.some(w => w._id === wall._id)) {
+            walls.push(new Wall(wall));
+          }
+        }
+      }
       for (const vt of capture.tokens) {
         const vtId = this._typedUniqueId("t", vehicleScene, vt);
         if (handled[vtId]) {
           continue;
         }
 
-        const rDiff = relativeDiff(vehicleCentre, game.multilevel._getTokenCentre(vehicleScene, vt), diff);
+        const tokenCentre = game.multilevel._getTokenCentre(vehicleScene, vt);
+        const rDiff = relativeDiff(vehicleCentre, tokenCentre, diff);
         if (vehicle.flags[VEHICLES.SCOPE].fixTokenOrientation) {
           rDiff.r = 0;
+        }
+        if (vehicle.flags[VEHICLES.SCOPE].wallCollision) {
+          const potentialWalls = [];
+          for (const wall of walls) {
+            const c = wall.data.c;
+            const wallNormal = {x: c[1] - c[3], y: c[2] - c[0]};
+            const tokenSign = (tokenCentre.x - c[0]) * wallNormal.x + (tokenCentre.y - c[1]) * wallNormal.y;
+            const dSign = rDiff.x * wallNormal.x + rDiff.y * wallNormal.y;
+            if (dSign && tokenSign && (dSign > 0) !== (tokenSign > 0)) {
+              potentialWalls.push(wall);
+            }
+          }
+          let t = 1;
+          const epsilon = 1 / 256;
+          const offsets = [];
+          if (rDiff.x < 0 || rDiff.y < 0) {
+            offsets.push({x: 0, y: 0}, {x: epsilon, y: epsilon});
+          }
+          if (rDiff.x > 0 || rDiff.y < 0) {
+            offsets.push({x: vt.width * vehicleScene.data.grid, y: 0},
+                         {x: vt.width * vehicleScene.data.grid - epsilon, y: epsilon});
+          }
+          if (rDiff.x > 0 || rDiff.y > 0) {
+            offsets.push({x: vt.width * vehicleScene.data.grid, y: vt.height * vehicleScene.data.grid},
+                         {x: vt.width * vehicleScene.data.grid - epsilon, y: vt.height * vehicleScene.data.grid - epsilon});
+          }
+          if (rDiff.x < 0 || rDiff.y > 0) {
+            offsets.push({x: 0, y: vt.height * vehicleScene.data.grid},
+                         {x: epsilon, y: vt.height * vehicleScene.data.grid - epsilon});
+          }
+          for (const offset of offsets) {
+            const ray = new Ray({x: vt.x + offset.x, y: vt.y + offset.y},
+                                {x: vt.x + offset.x + rDiff.x, y: vt.y + offset.y + rDiff.y});
+            const collision = WallsLayer.getWallCollisionsForRay(ray, potentialWalls, {mode: "closest"});
+            t = Math.min(t, collision.t0);
+          }
+          if (t < 2 * epsilon) {
+            t = 0;
+          }
+          rDiff.x *= t;
+          rDiff.y *= t;
         }
         const vtUpdate = this._getUpdateData(vt, rDiff);
         requestBatch.updateToken(vehicleScene, vtUpdate);

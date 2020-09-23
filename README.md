@@ -20,7 +20,7 @@ Remember to enable the module in the **Manage Modules** menu after installation.
 
 Holding the Alt key allows you to reposition or rotate a vehicle drawing or controller token _without_ also moving captured elements.
 
-## Controller tokens
+## Controller tokens (advanced)
 
 The advantages of using controller tokens are:
 
