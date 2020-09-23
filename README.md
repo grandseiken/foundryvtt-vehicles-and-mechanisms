@@ -1,14 +1,16 @@
 # Vehicles and Mechanisms module for Foundry VTT
 
+Not ready to use yet.
+
 ## Installation
 
 You can install this module by searching for it in Foundry's built-in module browser, or with the following public URL:
 
 ```
-https://raw.githubusercontent.com/grandseiken/foundryvtt-vehicles/master/module.json
+https://raw.githubusercontent.com/grandseiken/foundryvtt-vehicles-and-mechanisms/master/module.json
 ```
 
-This module depends on the [Multilevel Tokens](https://github.com/grandseiken/foundryvtt-multilevel-tokens) module. Please make sure you have the latest version of both modules installed, or you might run into problems!
+This module depends on the [Multilevel Tokens](https://github.com/grandseiken/foundryvtt-multilevel-tokens) module. Please make sure you have the latest version of both modules installed, or you might run into problems.
 
 Remember to enable the module in the **Manage Modules** menu after installation.
 

@@ -11,12 +11,12 @@ const VEHICLES = {
   CONTROL_SCHEME_RELATIVE: 2,
 };
 
+// TODO: implement Walls
+// TODO: localization
 // TODO: better way to identify controller tokens?
 // TOOD: option for tokens to collide with walls
 // - Maybe also to halt movement of vehicle?
-// TODO: implement Walls
 // TODO: do angles need clamping
-// TODO: localization
 class Vehicles {
   constructor() {
     console.log(VEHICLES.LOG_PREFIX, "Initialized");
