@@ -1,3 +1,4 @@
+
 const VEHICLES = {
   SCOPE: "vehicles",
   LOG_PREFIX: "Vehicles | ",
@@ -10,10 +11,13 @@ const VEHICLES = {
   CONTROL_SCHEME_RELATIVE: 2,
 };
 
-  // TODO: better way to identify controller tokens?
-  // TODO: finish auto-capture vs. capture current.
-  // TODO: amplification / coefficient / etc
-  // TODO: rename to Vehicles and Mechanisms
+// TODO: better way to identify controller tokens?
+// TOOD: option for tokens to collide with walls
+// - Maybe also to halt movement of vehicle?
+// TODO: rename to Vehicles and Mechanisms
+// TODO: implement Walls
+// TODO: do angles need clamping
+// TODO: localization
 class Vehicles {
   constructor() {
     console.log(VEHICLES.LOG_PREFIX, "Initialized");
@@ -39,7 +43,10 @@ class Vehicles {
     const flags = drawing.flags[VEHICLES.SCOPE];
     const allCaptures = [flags.captureTokens, flags.captureDrawings, flags.captureTiles,
                          flags.captureWalls, flags.captureLights, flags.captureSounds];
-    if (!allCaptures.some(c => c === VEHICLES.CAPTURE_MANUAL)) {
+
+    const object = hud.object;
+    const vehicleState = this._vehicleMap[this._uniqueId(object.scene, drawing)];
+    if (!vehicleState || !allCaptures.some(c => c === VEHICLES.CAPTURE_MANUAL)) {
       return;
     }
     const icon = `<div class="control-icon vehicles-capture">
@@ -49,6 +56,44 @@ class Vehicles {
       <img src="icons/svg/explosion.svg" width="36" height="36" title="Manual Vehicle Release">
     </div>`;
     html.find(".col.right .control-icon").last().after(icon);
+    html.find(".vehicles-capture").click(async () => {
+      const capture = this._getVehicleCaptureSet(object.scene, drawing, VEHICLES.CAPTURE_MANUAL);
+      const count = capture.tokens.length + capture.drawings.length + capture.tiles.length +
+                    capture.walls.length + capture.lights.length + capture.sounds.length;
+      const getId = e => e._id;
+      const update = {flags: {}};
+      update.flags[VEHICLES.SCOPE] = {
+        capture: {
+          tokens: capture.tokens.map(getId),
+          drawings: capture.drawings.map(getId),
+          tiles: capture.tiles.map(getId),
+          walls: capture.walls.map(getId),
+          lights: capture.lights.map(getId),
+          sounds: capture.sounds.map(getId),
+        },
+      };
+      await object.update(update);
+      ui.notifications.info(`${count} objects captured.`);
+    });
+    html.find(".vehicles-release").click(async () => {
+      const currentDrawing = object.scene.data.drawings.find(d => d._id === drawing._id);
+      let count = 0;
+      if (currentDrawing.flags[VEHICLES.SCOPE] && currentDrawing.flags[VEHICLES.SCOPE].capture) {
+        const capture = currentDrawing.flags[VEHICLES.SCOPE].capture;
+        count += capture.tokens ? capture.tokens.length : 0;
+        count += capture.drawings ? capture.drawings.length : 0;
+        count += capture.tiles ? capture.tiles.length : 0;
+        count += capture.walls ? capture.walls.length : 0;
+        count += capture.lights ? capture.lights.length : 0;
+        count += capture.sounds ? capture.sounds.length : 0;
+      }
+      const update = {flags: {}};
+      update.flags[VEHICLES.SCOPE] = {
+        capture: {tokens: [], drawings: [], tiles: [], walls: [], lights: [], sounds: []},
+      };
+      await object.update(update);
+      ui.notifications.info(`${count} objects released.`);
+    });
   }
 
   _injectDrawingConfigTab(app, html, data) {
@@ -69,7 +114,7 @@ class Vehicles {
       <hr>
       <p class="notes">Choose which elements within the Drawing will be moved together as part of the vehicle.
       <b>Auto</b> means elements will be captured whenever they lie within the drawing.
-      <b>Manual</b> means elements are only captured if they lie within the drawing when the <b>Capture</b> Drawing HUD option is used.</p>
+      <b>Manual</b> means elements are only captured if they lie within the drawing when the <b>Manual Vehicle Capture</b> Drawing HUD option is used.</p>
       <div class="form-group">
         <label for="vehiclesCaptureTokens">Capture tokens</label>
         <select name="vehiclesCaptureTokens" data-dtype="Number"/>${captureOptions}</select>
@@ -118,6 +163,19 @@ class Vehicles {
         <b>Tank</b> means: controller token moves <b>up</b>, vehicle moves <b>forwards</b>;
         <b>Relative</b> means: controller token moves <b>forwards</b>, vehicle moves <b>forwards</b>.</p>
       </div>
+      <div class="form-group">
+        <label for="vehiclesXCoefficient">X-coefficient</label>
+        <input type="text" name="vehiclesXCoefficient" value="1" data-dtype="Number"/>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesYCoefficient">Y-coefficient</label>
+        <input type="text" name="vehiclesYCoefficient" value="1" data-dtype="Number"/>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesAngularCoefficient">Angular coefficient</label>
+        <input type="text" name="vehiclesAngularCoefficient" value="1" data-dtype="Number"/>
+      </div>
+      <p class="notes">These values are used to scale movement of the controller token in the X-direction, the Y-direction, and its rotation, respectively, before the movement is applied to the vehicle. They can be any positive or negative decimal value.</p>
     </div>`;
 
     html.find(".tabs .item").last().after(tab);
@@ -126,9 +184,13 @@ class Vehicles {
     const input = (name) => vehiclesTab.find(`input[name="${name}"]`);
     const select = (name) => vehiclesTab.find(`select[name="${name}"]`)
 
+    input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
     input("vehiclesControllerToken").prop("value", flags.controllerToken);
     select("vehiclesControlScheme").val(flags.controlScheme || 0);
-    input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
+    input("vehiclesXCoefficient").prop("value", "xCoefficient" in flags ? flags.xCoefficient : 1);
+    input("vehiclesYCoefficient").prop("value", "yCoefficient" in flags ? flags.yCoefficient : 1);
+    input("vehiclesAngularCoefficient").prop("value", "angularCoefficient" in flags ? flags.angularCoefficient : 1);
+
     select("vehiclesCaptureTokens").val(flags.captureTokens || 0);
     select("vehiclesCaptureDrawings").val(flags.captureDrawings || 0);
     select("vehiclesCaptureTiles").val(flags.captureTiles || 0);
@@ -162,9 +224,13 @@ class Vehicles {
       delete update[inputName];
     };
 
+    convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
     convertFlag("vehiclesControllerToken", "controllerToken");
     convertFlag("vehiclesControlScheme", "controlScheme");
-    convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
+    convertFlag("vehiclesXCoefficient", "xCoefficient");
+    convertFlag("vehiclesYCoefficient", "yCoefficient");
+    convertFlag("vehiclesAngularCoefficient", "angularCoefficient");
+
     convertFlag("vehiclesCaptureTokens", "captureTokens");
     convertFlag("vehiclesCaptureDrawings", "captureDrawings");
     convertFlag("vehiclesCaptureTiles", "captureTiles");
@@ -172,7 +238,21 @@ class Vehicles {
     convertFlag("vehiclesCaptureLights", "captureLights");
     convertFlag("vehiclesCaptureSounds", "captureSounds");
 
-    if (update.flags && update.flags[VEHICLES.SCOPE] && update.flags[VEHICLES.SCOPE].controllerToken) {
+    if (!update.flags || !update.flags[VEHICLES.SCOPE]) {
+      return;
+    }
+    const flags = update.flags[VEHICLES.SCOPE];
+    if ("xCoefficient" in flags && isNaN(flags.xCoefficient)) {
+      flags.xCoefficient = 1;
+    }
+    if ("yCoefficient" in flags && isNaN(flags.yCoefficient)) {
+      flags.yCoefficient = 1;
+    }
+    if ("angularCoefficient" in flags && isNaN(flags.angularCoefficient)) {
+      flags.angularCoefficient = 1;
+    }
+    if (flags.controllerToken || flags.captureTokens || flags.captureDrawings || flags.captureTiles ||
+        flags.captureWalls || flags.captureLights || flags.captureSounds) {
       update.hidden = true;
     }
   }
@@ -255,15 +335,69 @@ class Vehicles {
     };
   }
 
-  _mapVehicleMoveDirection(controllerToken, vehicle, deltaVector) {
-    const controlScheme = vehicle.flags[VEHICLES.SCOPE].controlScheme;
+  _getVehicleCaptureSet(scene, vehicle, captureType) {
+    const flags = vehicle.flags[VEHICLES.SCOPE];
+    return {
+      tokens: flags.captureTokens === captureType
+          ? scene.data.tokens.filter(e => game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle))
+          : [],
+      drawings: flags.captureDrawings === captureType
+          ? scene.data.drawings.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+          : [],
+      tiles: flags.captureTiles === captureType
+          ? scene.data.tiles.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+          : [],
+      walls: [],
+      lights: flags.captureLights === captureType
+          ? scene.data.lights.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+          : [],
+      sounds: flags.captureSounds === captureType
+          ? scene.data.sounds.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+          : [],
+    };
+  }
+
+  _getMergedVehicleCaptureSet(scene, vehicle) {
+    const capture = this._getVehicleCaptureSet(scene, vehicle, VEHICLES.CAPTURE_AUTO);
+    const flags = vehicle.flags[VEHICLES.SCOPE];
+    if (!flags.capture) {
+      return capture;
+    }
+    if (flags.captureTokens === VEHICLES.CAPTURE_MANUAL && flags.capture.tokens) {
+      capture.tokens = scene.data.tokens.filter(e => flags.capture.tokens.includes(e._id));
+    }
+    if (flags.captureDrawings === VEHICLES.CAPTURE_MANUAL && flags.capture.drawings) {
+      capture.drawings = scene.data.drawings.filter(e => flags.capture.drawings.includes(e._id));
+    }
+    if (flags.captureTiles === VEHICLES.CAPTURE_MANUAL && flags.capture.tiles) {
+      capture.tiles = scene.data.tiles.filter(e => flags.capture.tiles.includes(e._id));
+    }
+    if (flags.captureWalls === VEHICLES.CAPTURE_MANUAL && flags.capture.walls) {
+      capture.walls = scene.data.walls.filter(e => flags.capture.walls.includes(e._id));
+    }
+    if (flags.captureLights === VEHICLES.CAPTURE_MANUAL && flags.capture.lights) {
+      capture.lights = scene.data.lights.filter(e => flags.capture.lights.includes(e._id));
+    }
+    if (flags.captureSounds === VEHICLES.CAPTURE_MANUAL && flags.capture.sounds) {
+      capture.sounds = scene.data.sounds.filter(e => flags.capture.sounds.includes(e._id));
+    }
+    return capture;
+  }
+
+  _mapVehicleMoveDirection(controllerToken, vehicle, diff) {
+    const flags = vehicle.flags[VEHICLES.SCOPE];
+    const controlScheme = flags.controlScheme;
+    let result = {
+      x: diff.x * flags.xCoefficient,
+      y: diff.y * flags.yCoefficient,
+    };
     if (controlScheme === VEHICLES.CONTROL_SCHEME_TANK) {
-      return game.multilevel._rotate({x: 0, y: 0}, deltaVector, vehicle.rotation);
+      result = game.multilevel._rotate({x: 0, y: 0}, result, vehicle.rotation);
+    } else if (controlScheme === VEHICLES.CONTROL_SCHEME_RELATIVE) {
+      result = game.multilevel._rotate({x: 0, y: 0}, result, vehicle.rotation - controllerToken.rotation);
     }
-    if (controlScheme === VEHICLES.CONTROL_SCHEME_RELATIVE) {
-      return game.multilevel._rotate({x: 0, y: 0}, deltaVector, vehicle.rotation - controllerToken.rotation);
-    }
-    return deltaVector;
+    result.r = diff.r * flags.angularCoefficient;
+    return result;
   }
 
   _getUpdateData(object, diff) {
@@ -284,114 +418,101 @@ class Vehicles {
       return result;
     };
 
-    const handleSimpleCapture = (vehicleScene, vehicle, vehicleCentre, diff,
+    const handleSimpleCapture = (vehicleScene, vehicleCentre, diff,
                                  type, elements, centreFunction, updateFunction) => {
       for (const e of elements) {
-        const centre = centreFunction(e);
         const eId = this._typedUniqueId(type, vehicleScene, e);
-        if (handled[eId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
-          continue;
+        if (!handled[eId]) {
+          updateFunction(this._getUpdateData(e, relativeDiff(vehicleCentre, centreFunction(e), diff)));
+          handled[eId] = true;
         }
-        updateFunction(this._getUpdateData(e, relativeDiff(vehicleCentre, centre, diff)));
-        handled[eId] = true;
       }
     }
 
     for (let i = 0; i < queue.length; ++i) {
       const diff = queue[i];
+      if (!diff.x && !diff.y && !diff.r) {
+        continue;
+      }
       const [vehicleScene, vehicle] = diff.vehicle;
       const vehicleCentre = game.multilevel._getDrawingCentre(vehicle);
+      const capture = this._getMergedVehicleCaptureSet(vehicleScene, vehicle);
 
-      if (vehicle.flags[VEHICLES.SCOPE].captureTiles === VEHICLES.CAPTURE_AUTO) {
-        handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
-                            "T", vehicleScene.data.tiles,
-                            e => game.multilevel._getDrawingCentre(e),
-                            u => requestBatch.updateTile(vehicleScene, u));
-      }
-      if (vehicle.flags[VEHICLES.SCOPE].captureLights === VEHICLES.CAPTURE_AUTO) {
-        handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
-                            "l", vehicleScene.data.lights, e => e,
-                            u => requestBatch.updateLight(vehicleScene, u));
-      }
-      if (vehicle.flags[VEHICLES.SCOPE].captureSounds === VEHICLES.CAPTURE_AUTO) {
-        handleSimpleCapture(vehicleScene, vehicle, vehicleCentre, diff,
-                            "s", vehicleScene.data.sounds, e => e,
-                            u => requestBatch.updateSound(vehicleScene, u));
-      }
+      handleSimpleCapture(vehicleScene, vehicleCentre, diff,
+                          "T", capture.tiles,
+                          e => game.multilevel._getDrawingCentre(e),
+                          u => requestBatch.updateTile(vehicleScene, u));
+      handleSimpleCapture(vehicleScene, vehicleCentre, diff,
+                          "l", capture.lights, e => e,
+                          u => requestBatch.updateLight(vehicleScene, u));
+      handleSimpleCapture(vehicleScene, vehicleCentre, diff,
+                          "s", capture.sounds, e => e,
+                          u => requestBatch.updateSound(vehicleScene, u));
 
-      if (vehicle.flags[VEHICLES.SCOPE].captureDrawings === VEHICLES.CAPTURE_AUTO) {
-        for (const vd of vehicleScene.data.drawings) {
-          const centre = game.multilevel._getDrawingCentre(vd);
-          const vdId = this._typedUniqueId("d", vehicleScene, vd);
-          if (handled[vdId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
-            continue;
-          }
+      for (const vd of capture.drawings) {
+        const vdId = this._typedUniqueId("d", vehicleScene, vd);
+        if (handled[vdId]) {
+          continue;
+        }
 
-          const rDiff = relativeDiff(vehicleCentre, centre, diff);
-          const vdUpdate = this._getUpdateData(vd, rDiff);
-          requestBatch.updateDrawing(vehicleScene, vdUpdate);
-          handled[vdId] = true;
+        const rDiff = relativeDiff(vehicleCentre, game.multilevel._getDrawingCentre(vd), diff);
+        const vdUpdate = this._getUpdateData(vd, rDiff);
+        requestBatch.updateDrawing(vehicleScene, vdUpdate);
+        handled[vdId] = true;
 
-          const subVehicleState = this._vehicleMap[this._uniqueId(vehicleScene, vd)];
-          if (subVehicleState) {
-            queue.push({
-              vehicle: [vehicleScene, vd],
-              x: rDiff.x,
-              y: rDiff.y,
-              r: rDiff.r,
-            });
-            subVehicleState.x = vdUpdate.x;
-            subVehicleState.y = vdUpdate.y;
-            subVehicleState.r = vdUpdate.rotation;
-          }
+        const subVehicleState = this._vehicleMap[this._uniqueId(vehicleScene, vd)];
+        if (subVehicleState) {
+          queue.push({
+            vehicle: [vehicleScene, vd],
+            x: rDiff.x,
+            y: rDiff.y,
+            r: rDiff.r,
+          });
+          subVehicleState.x = vdUpdate.x;
+          subVehicleState.y = vdUpdate.y;
+          subVehicleState.r = vdUpdate.rotation;
         }
       }
 
-      if (vehicle.flags[VEHICLES.SCOPE].captureTokens === VEHICLES.CAPTURE_AUTO) {
-        for (const vt of vehicleScene.data.tokens) {
-          const centre = game.multilevel._getTokenCentre(vehicleScene, vt);
-          const vtId = this._typedUniqueId("t", vehicleScene, vt);
-          if (handled[vtId] || !game.multilevel._isPointInRegion(centre, vehicle)) {
-            continue;
-          }
+      for (const vt of capture.tokens) {
+        const vtId = this._typedUniqueId("t", vehicleScene, vt);
+        if (handled[vtId]) {
+          continue;
+        }
 
-          const rDiff = relativeDiff(vehicleCentre, centre, diff);
-          if (vehicle.flags[VEHICLES.SCOPE].fixTokenOrientation) {
-            rDiff.r = 0;
-          }
-          const vtUpdate = this._getUpdateData(vt, rDiff);
-          requestBatch.updateToken(vehicleScene, vtUpdate);
-          handled[vtId] = true;
+        const rDiff = relativeDiff(vehicleCentre, game.multilevel._getTokenCentre(vehicleScene, vt), diff);
+        if (vehicle.flags[VEHICLES.SCOPE].fixTokenOrientation) {
+          rDiff.r = 0;
+        }
+        const vtUpdate = this._getUpdateData(vt, rDiff);
+        requestBatch.updateToken(vehicleScene, vtUpdate);
+        handled[vtId] = true;
 
-          const controller = this._controllerMap[this._uniqueId(vehicleScene, vt)];
-          if (controller) {
-            for (const v of controller.vehicles) {
-              const vdId = this._typedUniqueId("d", v[0], v[1]);
-              const vehicleState = this._vehicleMap[this._uniqueId(v[0], v[1])];
-              if (handled[vdId] || !vehicleState) {
-                continue;
-              }
-              const deltaVector = this._mapVehicleMoveDirection(vt, v[1], {x: rDiff.x, y: rDiff.y});
-              const vDiff = duplicate(rDiff);
-              vDiff.x = deltaVector.x;
-              vDiff.y = deltaVector.y;
-              const vUpdate = this._getUpdateData(v[1], vDiff);
-              requestBatch.updateDrawing(v[0], vUpdate);
-              queue.push({
-                vehicle: v,
-                x: vDiff.x,
-                y: vDiff.y,
-                r: vDiff.r,
-              });
-              vehicleState.x = vUpdate.x;
-              vehicleState.y = vUpdate.y;
-              vehicleState.r = vUpdate.rotation;
-              handled[vdId] = true;
+        const controller = this._controllerMap[this._uniqueId(vehicleScene, vt)];
+        if (controller) {
+          for (const v of controller.vehicles) {
+            const vdId = this._typedUniqueId("d", v[0], v[1]);
+            const vehicleState = this._vehicleMap[this._uniqueId(v[0], v[1])];
+            if (handled[vdId] || !vehicleState) {
+              continue;
             }
-            controller.x = vtUpdate.x;
-            controller.y = vtUpdate.y;
-            controller.r = vtUpdate.rotation;
+            const vDiff = this._mapVehicleMoveDirection(vt, v[1], rDiff);
+            const vUpdate = this._getUpdateData(v[1], vDiff);
+            requestBatch.updateDrawing(v[0], vUpdate);
+            queue.push({
+              vehicle: v,
+              x: vDiff.x,
+              y: vDiff.y,
+              r: vDiff.r,
+            });
+            vehicleState.x = vUpdate.x;
+            vehicleState.y = vUpdate.y;
+            vehicleState.r = vUpdate.rotation;
+            handled[vdId] = true;
           }
+          controller.x = vtUpdate.x;
+          controller.y = vtUpdate.y;
+          controller.r = vtUpdate.rotation;
         }
       }
     }
@@ -430,12 +551,13 @@ class Vehicles {
       const deltaVector = this._mapVehicleMoveDirection(token, v[1], {
         x: token.x - controller.x,
         y: token.y - controller.y,
+        r: token.rotation - controller.r,
       });
       const diff = {
         vehicle: v,
         x: deltaVector.x,
         y: deltaVector.y,
-        r: token.rotation - controller.r,
+        r: deltaVector.r,
       };
       const update = this._getUpdateData(v[1], diff);
       vehicleState.x = update.x;
@@ -546,7 +668,7 @@ class Vehicles {
   }
 
   _onRenderDrawingHUD(hud, html, drawing) {
-    if (game.multilevel._isAuthorisedRegion(drawing) && this._isVehicle(drawing)) {
+    if (game.multilevel._isAuthorisedRegion(drawing) && this._isVehicle(drawing) && game.user.isGM) {
       this._injectVehicleHUD(hud, html, drawing);
     }
   }
