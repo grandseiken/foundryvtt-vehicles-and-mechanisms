@@ -31,7 +31,7 @@
   "VEHICLES.TokenControlSchemeOptionRelative": "Relative",
   "VEHICLES.FieldTokenControlSchemeNotes": "Determines how movement of the controller token translates into movement of the vehicle. <b>Assuming that both vehicle and token begin (unrotated) facing upwards</b>, <b>Absolute</b> means: controller token moves <b>up</b>, vehicle moves <b>up</b>; <b>Tank</b> means: controller token moves <b>up</b>, vehicle moves <b>forwards</b>; <b>Relative</b> means: controller token moves <b>forwards</b>, vehicle moves <b>forwards</b>.",
   "VEHICLES.FieldXCoefficient": "X-coefficient",
-  "VEHICLES.FieldYCoefficient": "X-coefficient",
+  "VEHICLES.FieldYCoefficient": "Y-coefficient",
   "VEHICLES.FieldAngularCoefficient": "Angular coefficient",
   "VEHICLES.SectionCoefficientsNotes": "These values are used to scale movement of the controller token in the X-direction, the Y-direction, and its rotation, respectively, before the movement is applied to the vehicle. They can be any positive or negative decimal value."
 }
