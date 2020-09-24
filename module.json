@@ -1,7 +1,7 @@
 {
   "name": "vehicles-and-mechanisms",
   "title": "Vehicles and Mechanisms",
-  "description": "<p>TODO</p><p>See page at URL below for full usage instructions.</p>",
+  "description": "<p>Adds a way to control multiple scene elements (tokens, tiles, walls, and so on) as a single unit, so that they all move and rotate at once. The concept is flexible and can be used for general automation, traps, or other mechanisms with moving parts.</p><p>See page at URL below for full usage instructions.</p>",
   "author": "grandseiken",
   "version": "0.1.0",
   "minimumCoreVersion": "0.6.0",

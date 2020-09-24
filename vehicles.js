@@ -108,6 +108,9 @@ class Vehicles {
     <div class="tab" data-tab="vehicles">
       <p class="notes">${game.i18n.localize("VEHICLES.TabNotes")}</p>
       <hr>
+      <h3 class="form-header">
+        <i class="fas fa-object-group"/></i> ${game.i18n.localize("VEHICLES.SectionCapture")}
+      </h3>
       <p class="notes">${game.i18n.localize("VEHICLES.SectionCaptureNotes")}</p>
       <div class="form-group">
         <label for="vehiclesCaptureTokens">${game.i18n.localize("VEHICLES.FieldCaptureTokens")}</label>
@@ -145,6 +148,9 @@ class Vehicles {
         <p class="notes">${game.i18n.localize("VEHICLES.FieldWallCollisionNotes")}</p>
       </div>
       <hr>
+      <h3 class="form-header">
+        <i class="fas fa-gamepad"/></i> ${game.i18n.localize("VEHICLES.SectionControllerToken")}
+      </h3>
       <div class="form-group">
         <label for="vehiclesControllerToken">${game.i18n.localize("VEHICLES.FieldControllerToken")}</label>
         <input type="text" name="vehiclesControllerToken" data-dtype="String"/>
