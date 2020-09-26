@@ -43,11 +43,11 @@ For each type of element (**tokens**, **drawings**, **tiles**, **walls**, **ligh
 
 * **None** (the default) means that elements of this type will not be captured by the vehicle.
 * **Auto** means that all elements of this type that lie within the drawing defining the vehicle will be captured whenever the vehicle moves.
-* **Manual** means that elements of this type can be captured manually using the **Capture Now** button in the drawing HUD (availably by right-clicking on the drawing). This button only appears if the vehicle has been configured with at least one **Manual** capture setting. When the button is clicked, all elements of types set to be manually-captured that lie within the drawing will be captured. Manually captured elements can be released with the **Release All** button in the drawing HUD.
+* **Manual** means that elements of this type can be captured manually using the **Capture Now** button in the drawing HUD (availably by right-clicking on the drawing). This button only appears if the vehicle has been configured with at least one **Manual** capture setting. When the button is clicked, all elements of types set to be manually-captured that lie within the drawing will be captured. Manually-captured elements can be released with the **Release All** button in the drawing HUD.
 
 For example, you might use the **Auto** setting for tokens, so that any token that steps onto the vehicle is captured automatically. The drawback of the **Auto** setting is that it could result in unintentional captures, so you need to be a bit careful.
 
-For other elements of the vehicle that should be fixed, the **Manual** setting makes more sense: for example, to create a vehicle that includes walls, you likely want to manually capture the relevant walls once to begin with, and them leave them alone. This way, the vehicle won't start dragging any other walls it encroaches along with it.
+For other elements of the vehicle that should be fixed, the **Manual** setting makes more sense: for example, to create a vehicle that includes walls, you likely want to manually capture the relevant walls once to begin with, and then leave them alone. This way, the vehicle won't start dragging any other walls it encroaches along with it.
 
 ![Demonstration of manual capture](demo/manual.gif)
 
@@ -82,7 +82,7 @@ Other advantages of using controller tokens are:
 
 Enter the exact name of the token you wish to use to control the vehicle into the **Name of controller token** box. Take care, as any token (even on another scene) with this name will become a controller token for the vehicle.
 
-By default, rotation of the controller token will rotate the vehicle about its centre. You can enter the name of a token to use as the pivot point into the **Name of pivot token** box. The closest token with this name to the vehicle will instead be used as the pivot point. You can also enter the name of the controller token into this box.
+By default, rotation of the controller token will rotate the vehicle about its centre. You can enter the name of a token to use as the pivot point into the **Name of pivot token** box. The closest token with this name to the vehicle will instead be used as the pivot point. You can enter the same name as you used for the controller token to use one token for both purposes.
 
 ![Demonstration of pivot token](demo/pivot.gif)
 
