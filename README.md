@@ -33,6 +33,8 @@ Remember to enable the module in the **Manage Modules** menu after installation.
 
 Holding the Alt key allows you to reposition or rotate a vehicle drawing or controller token without also moving captured elements.
 
+Note that, as with Multilevel Tokens, a GM user must be logged in for the module to function.
+
 ## Capturing
 
 Vehicles work by **capturing** scene elements. When an element is captured, it will move and rotate with the vehicle. Note that a captured element can still be moved independently, or step off of the vehicle, but will be brought along with the vehicle's movement as long as it remains within the drawing defining the vehicle.
