@@ -103,5 +103,7 @@ The **X-coefficient**, **Y-coefficient** and **Angular coefficient** settings af
 
 # Version history
 
+* **0.1.1**:
+  * Basic dependency checking. An error will now be raised if the installed version of Multilevel Tokens is too old.
 * **0.1.0**:
   * First version.
