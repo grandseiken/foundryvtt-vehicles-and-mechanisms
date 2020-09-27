@@ -1,5 +1,6 @@
 
 const VEHICLES = {
+  REQUIRED_MLT_VERSION: "1.2.0",
   SCOPE: "vehicles",
   LOG_PREFIX: "Vehicles and Mechanisms | ",
   BYPASS: "vehicles_bypass",
@@ -33,6 +34,46 @@ class Vehicles {
     Hooks.on("deleteScene", this._refreshState.bind(this));
     this._controllerMap = {};
     this._vehicleMap = {};
+    this._dependenciesOK = false;
+  }
+
+  _checkDependencies() {
+    if (this._dependenciesOK) {
+      return;
+    }
+    if (game.user.isGM) {
+      const raiseError = (e) => {
+        console.error(e);
+        ui.notifications.error(e);
+      }
+      const parseVersion = (versionString) => versionString.split(".").map(x => parseInt(x));
+      const versionLess = (a, b) => {
+        for (let i = 0; i < a.length && i < b.length; ++i) {
+          if (a[i] < b[i]) {
+            return true;
+          }
+          if (a[i] > b[i]) {
+            return false;
+          }
+        }
+        return false;
+      }
+      const mltModule = game.modules.get("multilevel-tokens");
+      if (!mltModule) {
+        raiseError("Vehicles and Mechanisms requires Multilevel Tokens >= " + VEHICLES.REQUIRED_MLT_VERSION +
+                   ", but it was not found. The module might not function correctly.");
+        return;
+      }
+
+      const requiredMltVersion = parseVersion(VEHICLES.REQUIRED_MLT_VERSION);
+      const mltVersion = parseVersion(mltModule.data.version);
+      if (versionLess(mltVersion, requiredMltVersion)) {
+        raiseError("Vehicles and Mechanisms requires Multilevel Tokens >= " + VEHICLES.REQUIRED_MLT_VERSION +
+                   ", but version " + mltModule.data.version + " was found. The module might not function correctly.");
+        return;
+      }
+      this._dependenciesOK = true;
+    }
   }
 
   _injectVehicleHUD(hud, html, drawing) {
@@ -286,6 +327,7 @@ class Vehicles {
   }
 
   _refreshState() {
+    this._checkDependencies();
     this._refreshControllerMap();
     this._refreshVehicleMap();
   }

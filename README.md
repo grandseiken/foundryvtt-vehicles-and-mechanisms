@@ -45,7 +45,7 @@ For each type of element (**tokens**, **drawings**, **tiles**, **walls**, **ligh
 
 * **None** (the default) means that elements of this type will not be captured by the vehicle.
 * **Auto** means that all elements of this type that lie within the drawing defining the vehicle will be captured whenever the vehicle moves.
-* **Manual** means that elements of this type can be captured manually using the **Capture Now** button in the drawing HUD (availably by right-clicking on the drawing). This button only appears if the vehicle has been configured with at least one **Manual** capture setting. When the button is clicked, all elements of types set to be manually-captured that lie within the drawing will be captured. Manually-captured elements can be released with the **Release All** button in the drawing HUD.
+* **Manual** means that elements of this type can be captured manually using the **Capture Now** button in the drawing HUD (available by right-clicking on the drawing). This button only appears if the vehicle has been configured with at least one **Manual** capture setting. When the button is clicked, all elements of types set to be manually-captured that lie within the drawing will be captured. Manually-captured elements can be released with the **Release All** button in the drawing HUD.
 
 For example, you might use the **Auto** setting for tokens, so that any token that steps onto the vehicle is captured automatically. The drawback of the **Auto** setting is that it could result in unintentional captures, so you need to be a bit careful.
 
