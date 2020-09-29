@@ -10,6 +10,8 @@ const VEHICLES = {
   CONTROL_SCHEME_ABSOLUTE: 0,
   CONTROL_SCHEME_TANK: 1,
   CONTROL_SCHEME_RELATIVE: 2,
+  TOKEN_HANDLED_ALL: 1,
+  TOKEN_HANDLED_MOVE_ONLY: 2,
 };
 
 // TODO: better system for linking up controller and pivot tokens?
@@ -529,6 +531,7 @@ class Vehicles {
         continue;
       }
       const [vehicleScene, vehicle] = diff.vehicle;
+      const vFlags = vehicle.flags[VEHICLES.SCOPE];
       const vehicleCentre = game.multilevel._getDrawingCentre(vehicle);
       const capture = this._getMergedVehicleCaptureSet(vehicleScene, vehicle);
 
@@ -579,7 +582,7 @@ class Vehicles {
       }
 
       const walls = [];
-      if (capture.tokens.length && vehicle.flags[VEHICLES.SCOPE].wallCollision) {
+      if (capture.tokens.length && vFlags.wallCollision) {
         for (const wall of vehicleScene.data.walls) {
           if (!capture.walls.some(w => w._id === wall._id)) {
             walls.push(new Wall(wall));
@@ -588,17 +591,16 @@ class Vehicles {
       }
       for (const vt of capture.tokens) {
         const vtId = this._typedUniqueId("t", vehicleScene, vt);
-        if (handled[vtId]) {
+        if (handled[vtId] && handled[vtId] === VEHICLES.TOKEN_HANDLED_ALL) {
           continue;
         }
 
         const tokenCentre = game.multilevel._getTokenCentre(vehicleScene, vt);
         const rDiff = relativeDiff(vehicleCentre, tokenCentre, diff);
-        const flags = vehicle.flags[VEHICLES.SCOPE]
-        if (flags.fixTokenOrientation || (flags.controllerToken === vt.name)) {
+        if (vFlags.fixTokenOrientation || handled[vtId] === VEHICLES.TOKEN_HANDLED_MOVE_ONLY) {
           rDiff.r = 0;
         }
-        if (vehicle.flags[VEHICLES.SCOPE].wallCollision) {
+        if (vFlags.wallCollision) {
           const potentialWalls = [];
           for (const wall of walls) {
             const c = wall.data.c;
@@ -641,7 +643,7 @@ class Vehicles {
         }
         const vtUpdate = this._getUpdateData(vt, rDiff);
         requestBatch.updateToken(vehicleScene, vtUpdate);
-        handled[vtId] = true;
+        handled[vtId] = VEHICLES.TOKEN_HANDLED_ALL;
 
         const controller = this._controllerMap[this._uniqueId(vehicleScene, vt)];
         if (controller) {
@@ -706,9 +708,8 @@ class Vehicles {
     // If it moved, it should not be moved by the vehicle, or it could end up moving twice, which is probably
     // not what anyone wants.
     // Might need revisiting in future.
-    if (diff.x || diff.y) {
-      handled[this._typedUniqueId("t", scene, token)] = true;
-    }
+    handled[this._typedUniqueId("t", scene, token)] =
+        diff.x || diff.y ? VEHICLES.TOKEN_HANDLED_ALL : VEHICLES.TOKEN_HANDLED_MOVE_ONLY;
     this._runVehicleMoveAlgorithm(requestBatch, handled, queue);
   }
 
