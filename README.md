@@ -103,6 +103,9 @@ The **X-coefficient**, **Y-coefficient** and **Angular coefficient** settings af
 
 # Version history
 
+* **0.2.0**:
+  * Added Japanese translation (contributed by Brother Sharp).
+  * Fixed minor incorrect behaviour in which a controller token captured by its own vehicle would rotate twice as much as intended when rotated directly by the user.
 * **0.1.1**:
   * Basic dependency checking. An error will now be raised if the installed version of Multilevel Tokens is too old.
 * **0.1.0**:
