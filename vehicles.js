@@ -594,7 +594,8 @@ class Vehicles {
 
         const tokenCentre = game.multilevel._getTokenCentre(vehicleScene, vt);
         const rDiff = relativeDiff(vehicleCentre, tokenCentre, diff);
-        if (vehicle.flags[VEHICLES.SCOPE].fixTokenOrientation) {
+        const flags = vehicle.flags[VEHICLES.SCOPE]
+        if (flags.fixTokenOrientation || (flags.controllerToken === vt.name)) {
           rDiff.r = 0;
         }
         if (vehicle.flags[VEHICLES.SCOPE].wallCollision) {
