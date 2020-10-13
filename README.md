@@ -106,6 +106,7 @@ The **X-coefficient**, **Y-coefficient** and **Angular coefficient** settings af
 * **0.3.0**:
   * Map notes can also now be captured and moved by vehicles.
   * Controller tokens no longer control vehicles on different scenes by default. Added a new checkbox to re-enable this behaviour when desired.
+  * Now requires Multilevel Tokens 1.3.2.
 * **0.2.0**:
   * Added Japanese translation (contributed by Brother Sharp).
   * Fixed minor incorrect behaviour in which a controller token captured by its own vehicle would rotate twice as much as intended when rotated directly by the user.
