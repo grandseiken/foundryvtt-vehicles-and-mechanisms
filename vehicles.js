@@ -1,6 +1,6 @@
 
 const VEHICLES = {
-  REQUIRED_MLT_VERSION: "1.2.0",
+  REQUIRED_MLT_VERSION: "1.3.2",
   SCOPE: "vehicles",
   LOG_PREFIX: "Vehicles and Mechanisms | ",
   BYPASS: "vehicles_bypass",
@@ -172,6 +172,10 @@ class Vehicles {
         <select name="vehiclesCaptureWalls" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
+        <label for="vehiclesCaptureMapNotes">${game.i18n.localize("VEHICLES.FieldCaptureMapNotes")}</label>
+        <select name="vehiclesCaptureMapNotes" data-dtype="Number"/>${captureOptions}</select>
+      </div>
+      <div class="form-group">
         <label for="vehiclesCaptureLights">${game.i18n.localize("VEHICLES.FieldCaptureLights")}</label>
         <select name="vehiclesCaptureLights" data-dtype="Number"/>${captureOptions}</select>
       </div>
@@ -198,6 +202,11 @@ class Vehicles {
         <label for="vehiclesControllerToken">${game.i18n.localize("VEHICLES.FieldControllerToken")}</label>
         <input type="text" name="vehiclesControllerToken" data-dtype="String"/>
         <p class="notes">${game.i18n.localize("VEHICLES.FieldControllerTokenNotes")}</p>
+      </div>
+      <div class="form-group">
+        <label for="vehiclesCrossSceneControl">${game.i18n.localize("VEHICLES.FieldCrossSceneControl")}</label>
+        <input type="checkbox" name="vehiclesCrossSceneControl" data-dtype="Boolean"/>
+        <p class="notes">${game.i18n.localize("VEHICLES.FieldCrossSceneControlNotes")}</p>
       </div>
       <div class="form-group">
         <label for="vehiclesPivotToken">${game.i18n.localize("VEHICLES.FieldPivotToken")}</label>
@@ -237,6 +246,7 @@ class Vehicles {
     input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
     input("vehiclesWallCollision").prop("checked", flags.wallCollision);
     input("vehiclesControllerToken").prop("value", flags.controllerToken);
+    input("vehiclesCrossSceneControl").prop("checked", flags.crossSceneControl);
     input("vehiclesPivotToken").prop("value", flags.pivotToken);
     select("vehiclesControlScheme").val(flags.controlScheme || 0);
     input("vehiclesXCoefficient").prop("value", "xCoefficient" in flags ? flags.xCoefficient : 1);
@@ -247,6 +257,7 @@ class Vehicles {
     select("vehiclesCaptureDrawings").val(flags.captureDrawings || 0);
     select("vehiclesCaptureTiles").val(flags.captureTiles || 0);
     select("vehiclesCaptureWalls").val(flags.captureWalls || 0);
+    select("vehiclesCaptureMapNotes").val(flags.captureMapNotes || 0);
     select("vehiclesCaptureLights").val(flags.captureLights || 0);
     select("vehiclesCaptureSounds").val(flags.captureSounds || 0);
 
@@ -279,6 +290,7 @@ class Vehicles {
     convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
     convertFlag("vehiclesWallCollision", "wallCollision");
     convertFlag("vehiclesControllerToken", "controllerToken");
+    convertFlag("vehiclesCrossSceneControl", "crossSceneControl");
     convertFlag("vehiclesPivotToken", "pivotToken");
     convertFlag("vehiclesControlScheme", "controlScheme");
     convertFlag("vehiclesXCoefficient", "xCoefficient");
@@ -289,6 +301,7 @@ class Vehicles {
     convertFlag("vehiclesCaptureDrawings", "captureDrawings");
     convertFlag("vehiclesCaptureTiles", "captureTiles");
     convertFlag("vehiclesCaptureWalls", "captureWalls");
+    convertFlag("vehiclesCaptureMapNotes", "captureMapNotes");
     convertFlag("vehiclesCaptureLights", "captureLights");
     convertFlag("vehiclesCaptureSounds", "captureSounds");
 
@@ -367,7 +380,8 @@ class Vehicles {
     for (const vehicleScene of game.scenes) {
       for (const drawing of vehicleScene.data.drawings) {
         if (drawing.flags[VEHICLES.SCOPE] &&
-            drawing.flags[VEHICLES.SCOPE].controllerToken === token.name) {
+            drawing.flags[VEHICLES.SCOPE].controllerToken === token.name &&
+            (drawing.flags[VEHICLES.SCOPE].crossSceneControl || scene === vehicleScene)) {
           if (!this._controllerMap[id]) {
             this._controllerMap[id] = {
               x: token.x,
@@ -407,6 +421,9 @@ class Vehicles {
           ? scene.data.walls.filter(e => game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
                                          game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle))
           : [],
+      mapNotes: flags.captureMapNotes === captureType
+          ? scene.data.notes.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+          : [],
       lights: flags.captureLights === captureType
           ? scene.data.lights.filter(e => game.multilevel._isPointInRegion(e, vehicle))
           : [],
@@ -442,6 +459,10 @@ class Vehicles {
           flags.capture.walls.includes(e._id) &&
           game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
           game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle));
+    }
+    if (flags.captureMapNotes === VEHICLES.CAPTURE_MANUAL && flags.capture.mapNotes) {
+      capture.mapNotes = scene.data.notes.filter(e =>
+          flags.capture.mapNotes.includes(e._id) && game.multilevel._isPointInRegion(e, vehicle));
     }
     if (flags.captureLights === VEHICLES.CAPTURE_MANUAL && flags.capture.lights) {
       capture.lights = scene.data.lights.filter(e =>
@@ -539,6 +560,9 @@ class Vehicles {
                           "T", capture.tiles,
                           e => game.multilevel._getDrawingCentre(e),
                           u => requestBatch.updateTile(vehicleScene, u));
+      handleSimpleCapture(vehicleScene, vehicleCentre, diff,
+                          "n", capture.mapNotes, e => e,
+                          u => requestBatch.updateMapNote(vehicleScene, u));
       handleSimpleCapture(vehicleScene, vehicleCentre, diff,
                           "l", capture.lights, e => e,
                           u => requestBatch.updateLight(vehicleScene, u));

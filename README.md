@@ -41,7 +41,7 @@ Vehicles work by **capturing** scene elements. When an element is captured, it w
 
 ![Capture configuration](demo/capture.png)
 
-For each type of element (**tokens**, **drawings**, **tiles**, **walls**, **lights** and **sounds**), you can choose between three capture behaviours:
+For each type of element (**tokens**, **drawings**, **tiles**, **walls**, **map notes**, **lights** and **sounds**), you can choose between three capture behaviours:
 
 * **None** (the default) means that elements of this type will not be captured by the vehicle.
 * **Auto** means that all elements of this type that lie within the drawing defining the vehicle will be captured whenever the vehicle moves.
@@ -76,13 +76,13 @@ As with moving the drawing directly, holding the Alt key allows you to repositio
 
 Other advantages of using controller tokens are:
 * A single controller token may be associated with multiple vehicles. This allows several vehicles to be controlled at once with a single input.
-* The controller token need not be placed within the vehicle itself; it can control the vehicle remotely. It can even be on another scene.
+* The controller token need not be placed within the vehicle itself; it can control the vehicle remotely. It can even be on another scene if the **Cross-scene control** box is checked.
 * As opposed to moving the drawing, the way in which a controller token's movement translates to movement of the vehicle can be customized in various different ways (see below).
 * The movement of one vehicle can capture the controller token for another vehicle, triggering chain reactions. I am sure somebody will find a way to devise elaborate contraptions.
 
 ![Controller token configuration](demo/controller.png)
 
-Enter the exact name of the token you wish to use to control the vehicle into the **Name of controller token** box. Take care, as any token (even on another scene) with this name will become a controller token for the vehicle.
+Enter the exact name of the token you wish to use to control the vehicle into the **Name of controller token** box. Any token with this name in the same scene will become a controller token for the vehicle. If the **Cross-scene control** box is checked, tokens with the correct name will control the vehicle even from another scene.
 
 By default, rotation of the controller token will rotate the vehicle about its centre. You can enter the name of a token to use as the pivot point into the **Name of pivot token** box. The closest token with this name to the vehicle will instead be used as the pivot point. You can enter the same name as you used for the controller token to use one token for both purposes.
 
@@ -103,6 +103,9 @@ The **X-coefficient**, **Y-coefficient** and **Angular coefficient** settings af
 
 # Version history
 
+* **0.3.0**:
+  * Map notes can also now be captured and moved by vehicles.
+  * Controller tokens no longer control vehicles on different scenes by default. Added a new checkbox to re-enable this behaviour when desired.
 * **0.2.0**:
   * Added Japanese translation (contributed by Brother Sharp).
   * Fixed minor incorrect behaviour in which a controller token captured by its own vehicle would rotate twice as much as intended when rotated directly by the user.
