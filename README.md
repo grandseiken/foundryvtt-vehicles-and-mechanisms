@@ -105,6 +105,7 @@ The **X-coefficient**, **Y-coefficient** and **Angular coefficient** settings af
 
 * **0.4.0**:
   * Updated for compatibility with Foundry 0.8.x series. No longer compatible with 0.7.x series.
+  * Fixed wall collision option.
 * **0.3.0**:
   * Map notes can also now be captured and moved by vehicles.
   * Controller tokens no longer control vehicles on different scenes by default. Added a new checkbox to re-enable this behaviour when desired.
