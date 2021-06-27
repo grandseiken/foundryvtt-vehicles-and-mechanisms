@@ -1,6 +1,5 @@
-
 const VEHICLES = {
-  REQUIRED_MLT_VERSION: "1.3.2",
+  REQUIRED_MLT_VERSION: "1.5.0",
   SCOPE: "vehicles",
   LOG_PREFIX: "Vehicles and Mechanisms | ",
   BYPASS: "vehicles_bypass",
@@ -115,9 +114,9 @@ class Vehicles {
       ui.notifications.info(game.i18n.format("VEHICLES.NotificationObjectsCaptured", {count: count}));
     });
     html.find(".vehicles-release").click(async () => {
-      const currentDrawing = object.scene.data.drawings.find(d => d._id === drawing._id);
+      const currentDrawing = object.scene.data.drawings.find(d => d.id === drawing._id)?.data;
       let count = 0;
-      if (currentDrawing.flags[VEHICLES.SCOPE] && currentDrawing.flags[VEHICLES.SCOPE].capture) {
+      if (currentDrawing && currentDrawing.flags[VEHICLES.SCOPE] && currentDrawing.flags[VEHICLES.SCOPE].capture) {
         const capture = currentDrawing.flags[VEHICLES.SCOPE].capture;
         count += capture.tokens ? capture.tokens.length : 0;
         count += capture.drawings ? capture.drawings.length : 0;
@@ -150,72 +149,70 @@ class Vehicles {
     const contents = `
     <div class="tab" data-tab="vehicles">
       <p class="notes">${game.i18n.localize("VEHICLES.TabNotes")}</p>
-      <hr>
       <h3 class="form-header">
         <i class="fas fa-object-group"/></i> ${game.i18n.localize("VEHICLES.SectionCapture")}
       </h3>
       <p class="notes">${game.i18n.localize("VEHICLES.SectionCaptureNotes")}</p>
       <div class="form-group">
-        <label for="vehiclesCaptureTokens">${game.i18n.localize("VEHICLES.FieldCaptureTokens")}</label>
-        <select name="vehiclesCaptureTokens" data-dtype="Number"/>${captureOptions}</select>
+        <label for="flags.vehicles.captureTokens">${game.i18n.localize("VEHICLES.FieldCaptureTokens")}</label>
+        <select name="flags.vehicles.captureTokens" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureDrawings">${game.i18n.localize("VEHICLES.FieldCaptureDrawings")}</label>
-        <select name="vehiclesCaptureDrawings" data-dtype="Number"/>${captureOptions}</select>
+        <label for="flags.vehicles.captureDrawings">${game.i18n.localize("VEHICLES.FieldCaptureDrawings")}</label>
+        <select name="flags.vehicles.captureDrawings" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureTiles">${game.i18n.localize("VEHICLES.FieldCaptureTiles")}</label>
-        <select name="vehiclesCaptureTiles" data-dtype="Number"/>${captureOptions}</select>
+        <label for="flags.vehicles.captureTiles">${game.i18n.localize("VEHICLES.FieldCaptureTiles")}</label>
+        <select name="flags.vehicles.captureTiles" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureWalls">${game.i18n.localize("VEHICLES.FieldCaptureWalls")}</label>
-        <select name="vehiclesCaptureWalls" data-dtype="Number"/>${captureOptions}</select>
+        <label for="flags.vehicles.captureWalls">${game.i18n.localize("VEHICLES.FieldCaptureWalls")}</label>
+        <select name="flags.vehicles.captureWalls" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureMapNotes">${game.i18n.localize("VEHICLES.FieldCaptureMapNotes")}</label>
-        <select name="vehiclesCaptureMapNotes" data-dtype="Number"/>${captureOptions}</select>
+        <label for="flags.vehicles.captureMapNotes">${game.i18n.localize("VEHICLES.FieldCaptureMapNotes")}</label>
+        <select name="flags.vehicles.captureMapNotes" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureLights">${game.i18n.localize("VEHICLES.FieldCaptureLights")}</label>
-        <select name="vehiclesCaptureLights" data-dtype="Number"/>${captureOptions}</select>
+        <label for="flags.vehicles.captureLights">${game.i18n.localize("VEHICLES.FieldCaptureLights")}</label>
+        <select name="flags.vehicles.captureLights" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <div class="form-group">
-        <label for="vehiclesCaptureSounds">${game.i18n.localize("VEHICLES.FieldCaptureSounds")}</label>
-        <select name="vehiclesCaptureSounds" data-dtype="Number"/>${captureOptions}</select>
+        <label for="flags.vehicles.captureSounds">${game.i18n.localize("VEHICLES.FieldCaptureSounds")}</label>
+        <select name="flags.vehicles.captureSounds" data-dtype="Number"/>${captureOptions}</select>
       </div>
       <hr>
       <div class="form-group">
-        <label for="vehiclesFixTokenOrientation">${game.i18n.localize("VEHICLES.FieldFixTokenOrientation")}</label>
-        <input type="checkbox" name="vehiclesFixTokenOrientation" data-dtype="Boolean"/>
+        <label for="flags.vehicles.fixTokenOrientation">${game.i18n.localize("VEHICLES.FieldFixTokenOrientation")}</label>
+        <input type="checkbox" name="flags.vehicles.fixTokenOrientation" data-dtype="Boolean"/>
         <p class="notes">${game.i18n.localize("VEHICLES.FieldFixTokenOrientationNotes")}</p>
       </div>
       <div class="form-group">
-        <label for="vehiclesWallCollision">${game.i18n.localize("VEHICLES.FieldWallCollision")}</label>
-        <input type="checkbox" name="vehiclesWallCollision" data-dtype="Boolean"/>
+        <label for="flags.vehicles.wallCollision">${game.i18n.localize("VEHICLES.FieldWallCollision")}</label>
+        <input type="checkbox" name="flags.vehicles.wallCollision" data-dtype="Boolean"/>
         <p class="notes">${game.i18n.localize("VEHICLES.FieldWallCollisionNotes")}</p>
       </div>
-      <hr>
       <h3 class="form-header">
         <i class="fas fa-gamepad"/></i> ${game.i18n.localize("VEHICLES.SectionControllerToken")}
       </h3>
       <div class="form-group">
-        <label for="vehiclesControllerToken">${game.i18n.localize("VEHICLES.FieldControllerToken")}</label>
-        <input type="text" name="vehiclesControllerToken" data-dtype="String"/>
+        <label for="flags.vehicles.controllerToken">${game.i18n.localize("VEHICLES.FieldControllerToken")}</label>
+        <input type="text" name="flags.vehicles.controllerToken" data-dtype="String"/>
         <p class="notes">${game.i18n.localize("VEHICLES.FieldControllerTokenNotes")}</p>
       </div>
       <div class="form-group">
-        <label for="vehiclesCrossSceneControl">${game.i18n.localize("VEHICLES.FieldCrossSceneControl")}</label>
-        <input type="checkbox" name="vehiclesCrossSceneControl" data-dtype="Boolean"/>
+        <label for="flags.vehicles.crossSceneControl">${game.i18n.localize("VEHICLES.FieldCrossSceneControl")}</label>
+        <input type="checkbox" name="flags.vehicles.crossSceneControl" data-dtype="Boolean"/>
         <p class="notes">${game.i18n.localize("VEHICLES.FieldCrossSceneControlNotes")}</p>
       </div>
       <div class="form-group">
-        <label for="vehiclesPivotToken">${game.i18n.localize("VEHICLES.FieldPivotToken")}</label>
-        <input type="text" name="vehiclesPivotToken" data-dtype="String"/>
+        <label for="flags.vehicles.pivotToken">${game.i18n.localize("VEHICLES.FieldPivotToken")}</label>
+        <input type="text" name="flags.vehicles.pivotToken" data-dtype="String"/>
         <p class="notes">${game.i18n.localize("VEHICLES.FieldPivotTokenNotes")}</p>
       </div>
       <div class="form-group">
-        <label for="vehiclesControlScheme">${game.i18n.localize("VEHICLES.FieldTokenControlScheme")}</label>
-        <select name="vehiclesControlScheme" data-dtype="Number">
+        <label for="flags.vehicles.controlScheme">${game.i18n.localize("VEHICLES.FieldTokenControlScheme")}</label>
+        <select name="flags.vehicles.controlScheme" data-dtype="Number">
           <option value="${VEHICLES.CONTROL_SCHEME_ABSOLUTE}">${game.i18n.localize("VEHICLES.TokenControlSchemeOptionAbsolute")}</option>
           <option value="${VEHICLES.CONTROL_SCHEME_TANK}">${game.i18n.localize("VEHICLES.TokenControlSchemeOptionTank")}</option>
           <option value="${VEHICLES.CONTROL_SCHEME_RELATIVE}">${game.i18n.localize("VEHICLES.TokenControlSchemeOptionRelative")}</option>
@@ -223,16 +220,16 @@ class Vehicles {
         <p class="notes">${game.i18n.localize("VEHICLES.FieldTokenControlSchemeNotes")}</p>
       </div>
       <div class="form-group">
-        <label for="vehiclesXCoefficient">${game.i18n.localize("VEHICLES.FieldXCoefficient")}</label>
-        <input type="text" name="vehiclesXCoefficient" value="1" data-dtype="Number"/>
+        <label for="flags.vehicles.xCoefficient">${game.i18n.localize("VEHICLES.FieldXCoefficient")}</label>
+        <input type="text" name="flags.vehicles.xCoefficient" value="1" data-dtype="Number"/>
       </div>
       <div class="form-group">
-        <label for="vehiclesYCoefficient">${game.i18n.localize("VEHICLES.FieldYCoefficient")}</label>
-        <input type="text" name="vehiclesYCoefficient" value="1" data-dtype="Number"/>
+        <label for="flags.vehicles.yCoefficient">${game.i18n.localize("VEHICLES.FieldYCoefficient")}</label>
+        <input type="text" name="flags.vehicles.yCoefficient" value="1" data-dtype="Number"/>
       </div>
       <div class="form-group">
-        <label for="vehiclesAngularCoefficient">${game.i18n.localize("VEHICLES.FieldAngularCoefficient")}</label>
-        <input type="text" name="vehiclesAngularCoefficient" value="1" data-dtype="Number"/>
+        <label for="flags.vehicles.angularCoefficient">${game.i18n.localize("VEHICLES.FieldAngularCoefficient")}</label>
+        <input type="text" name="flags.vehicles.angularCoefficient" value="1" data-dtype="Number"/>
       </div>
       <p class="notes">${game.i18n.localize("VEHICLES.SectionCoefficientsNotes")}</p>
     </div>`;
@@ -240,26 +237,26 @@ class Vehicles {
     html.find(".tabs .item").last().after(tab);
     html.find(".tab").last().after(contents);
     const vehiclesTab = html.find(".tab").last();
-    const input = (name) => vehiclesTab.find(`input[name="${name}"]`);
-    const select = (name) => vehiclesTab.find(`select[name="${name}"]`)
+    const input = (name) => vehiclesTab.find(`input[name="flags.vehicles.${name}"]`);
+    const select = (name) => vehiclesTab.find(`select[name="flags.vehicles.${name}"]`)
 
-    input("vehiclesFixTokenOrientation").prop("checked", flags.fixTokenOrientation);
-    input("vehiclesWallCollision").prop("checked", flags.wallCollision);
-    input("vehiclesControllerToken").prop("value", flags.controllerToken);
-    input("vehiclesCrossSceneControl").prop("checked", flags.crossSceneControl);
-    input("vehiclesPivotToken").prop("value", flags.pivotToken);
-    select("vehiclesControlScheme").val(flags.controlScheme || 0);
-    input("vehiclesXCoefficient").prop("value", "xCoefficient" in flags ? flags.xCoefficient : 1);
-    input("vehiclesYCoefficient").prop("value", "yCoefficient" in flags ? flags.yCoefficient : 1);
-    input("vehiclesAngularCoefficient").prop("value", "angularCoefficient" in flags ? flags.angularCoefficient : 1);
+    input("fixTokenOrientation").prop("checked", flags.fixTokenOrientation);
+    input("wallCollision").prop("checked", flags.wallCollision);
+    input("controllerToken").prop("value", flags.controllerToken);
+    input("crossSceneControl").prop("checked", flags.crossSceneControl);
+    input("pivotToken").prop("value", flags.pivotToken);
+    select("controlScheme").val(flags.controlScheme || 0);
+    input("xCoefficient").prop("value", "xCoefficient" in flags ? flags.xCoefficient : 1);
+    input("yCoefficient").prop("value", "yCoefficient" in flags ? flags.yCoefficient : 1);
+    input("angularCoefficient").prop("value", "angularCoefficient" in flags ? flags.angularCoefficient : 1);
 
-    select("vehiclesCaptureTokens").val(flags.captureTokens || 0);
-    select("vehiclesCaptureDrawings").val(flags.captureDrawings || 0);
-    select("vehiclesCaptureTiles").val(flags.captureTiles || 0);
-    select("vehiclesCaptureWalls").val(flags.captureWalls || 0);
-    select("vehiclesCaptureMapNotes").val(flags.captureMapNotes || 0);
-    select("vehiclesCaptureLights").val(flags.captureLights || 0);
-    select("vehiclesCaptureSounds").val(flags.captureSounds || 0);
+    select("captureTokens").val(flags.captureTokens || 0);
+    select("captureDrawings").val(flags.captureDrawings || 0);
+    select("captureTiles").val(flags.captureTiles || 0);
+    select("captureWalls").val(flags.captureWalls || 0);
+    select("captureMapNotes").val(flags.captureMapNotes || 0);
+    select("captureLights").val(flags.captureLights || 0);
+    select("captureSounds").val(flags.captureSounds || 0);
 
     if (!game.multilevel._isUserGamemaster(game.user._id)) {
       vehiclesTab.find("input").prop("disabled", true);
@@ -267,47 +264,10 @@ class Vehicles {
   }
 
   _convertDrawingConfigUpdateData(data, update) {
-    if (!("vehiclesCaptureTokens" in update) && (!update.flags || !update.flags[VEHICLES.SCOPE])) {
-      return;
-    }
-
-    const convertFlag = (inputName, flagName) => {
-      if (!(inputName in update)) {
-        return;
-      }
-      if (!data.flags || !data.flags[VEHICLES.SCOPE] || data.flags[VEHICLES.SCOPE][flagName] !== update[inputName]) {
-        if (!update.flags) {
-          update.flags = {};
-        }
-        if (!update.flags[VEHICLES.SCOPE]) {
-          update.flags[VEHICLES.SCOPE] = {};
-        }
-        update.flags[VEHICLES.SCOPE][flagName] = update[inputName];
-      }
-      delete update[inputName];
-    };
-
-    convertFlag("vehiclesFixTokenOrientation", "fixTokenOrientation");
-    convertFlag("vehiclesWallCollision", "wallCollision");
-    convertFlag("vehiclesControllerToken", "controllerToken");
-    convertFlag("vehiclesCrossSceneControl", "crossSceneControl");
-    convertFlag("vehiclesPivotToken", "pivotToken");
-    convertFlag("vehiclesControlScheme", "controlScheme");
-    convertFlag("vehiclesXCoefficient", "xCoefficient");
-    convertFlag("vehiclesYCoefficient", "yCoefficient");
-    convertFlag("vehiclesAngularCoefficient", "angularCoefficient");
-
-    convertFlag("vehiclesCaptureTokens", "captureTokens");
-    convertFlag("vehiclesCaptureDrawings", "captureDrawings");
-    convertFlag("vehiclesCaptureTiles", "captureTiles");
-    convertFlag("vehiclesCaptureWalls", "captureWalls");
-    convertFlag("vehiclesCaptureMapNotes", "captureMapNotes");
-    convertFlag("vehiclesCaptureLights", "captureLights");
-    convertFlag("vehiclesCaptureSounds", "captureSounds");
-
     if (!update.flags || !update.flags[VEHICLES.SCOPE]) {
       return;
     }
+
     const flags = update.flags[VEHICLES.SCOPE];
     if ("xCoefficient" in flags && isNaN(flags.xCoefficient)) {
       flags.xCoefficient = 1;
@@ -334,7 +294,7 @@ class Vehicles {
   }
 
   _uniqueId(scene, object) {
-    return scene._id + ":" + object._id;
+    return scene.id + ":" + object._id;
   }
 
   _typedUniqueId(type, scene, object) {
@@ -354,7 +314,7 @@ class Vehicles {
     this._controllerMap = {};
     for (const scene of game.scenes) {
       for (const token of scene.data.tokens) {
-        this._refreshControllerMapForToken(scene, token);
+        this._refreshControllerMapForToken(scene, token.data);
       }
     }
   }
@@ -366,7 +326,7 @@ class Vehicles {
     this._vehicleMap = {};
     for (const scene of game.scenes) {
       for (const drawing of scene.data.drawings) {
-        this._refreshVehicleMapForVehicle(scene, drawing);
+        this._refreshVehicleMapForVehicle(scene, drawing.data);
       }
     }
   }
@@ -378,7 +338,8 @@ class Vehicles {
     const id = this._uniqueId(scene, token);
     delete this._controllerMap[id];
     for (const vehicleScene of game.scenes) {
-      for (const drawing of vehicleScene.data.drawings) {
+      for (const d of vehicleScene.data.drawings) {
+        const drawing = d.data;
         if (drawing.flags[VEHICLES.SCOPE] &&
             drawing.flags[VEHICLES.SCOPE].controllerToken === token.name &&
             (drawing.flags[VEHICLES.SCOPE].crossSceneControl || scene === vehicleScene)) {
@@ -408,27 +369,34 @@ class Vehicles {
     const flags = vehicle.flags[VEHICLES.SCOPE];
     return {
       tokens: flags.captureTokens === captureType
-          ? scene.data.tokens.filter(e => !game.multilevel._isReplicatedToken(e) &&
-                                          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle))
+          ? scene.data.tokens.filter(e => !game.multilevel._isReplicatedToken(e.data) &&
+                                          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e.data), vehicle))
+                             .map(e => e.data)
           : [],
       drawings: flags.captureDrawings === captureType
-          ? scene.data.drawings.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+          ? scene.data.drawings.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
+                               .map(e => e.data)
           : [],
       tiles: flags.captureTiles === captureType
-          ? scene.data.tiles.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+          ? scene.data.tiles.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
+                            .map(e => e.data)
           : [],
       walls: flags.captureWalls === captureType
-          ? scene.data.walls.filter(e => game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
-                                         game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle))
+          ? scene.data.walls.filter(e => game.multilevel._isPointInRegion({x: e.data.c[0], y: e.data.c[1]}, vehicle) &&
+                                         game.multilevel._isPointInRegion({x: e.data.c[2], y: e.data.c[3]}, vehicle))
+                            .map(e => e.data)
           : [],
       mapNotes: flags.captureMapNotes === captureType
-          ? scene.data.notes.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+          ? scene.data.notes.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
+                            .map(e => e.data)
           : [],
       lights: flags.captureLights === captureType
-          ? scene.data.lights.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+          ? scene.data.lights.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
+                             .map(e => e.data)
           : [],
       sounds: flags.captureSounds === captureType
-          ? scene.data.sounds.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+          ? scene.data.sounds.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
+                             .map(e => e.data)
           : [],
     };
   }
@@ -441,36 +409,43 @@ class Vehicles {
     }
     if (flags.captureTokens === VEHICLES.CAPTURE_MANUAL && flags.capture.tokens) {
       capture.tokens = scene.data.tokens.filter(e =>
-          flags.capture.tokens.includes(e._id) &&
-          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle));
+          flags.capture.tokens.includes(e.id) &&
+          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e.data), vehicle))
+      .map(e => e.data);
     }
     if (flags.captureDrawings === VEHICLES.CAPTURE_MANUAL && flags.capture.drawings) {
       capture.drawings = scene.data.drawings.filter(e =>
-          flags.capture.drawings.includes(e._id) &&
-          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle));
+          flags.capture.drawings.includes(e.id) &&
+          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
+      .map(e => e.data);
     }
     if (flags.captureTiles === VEHICLES.CAPTURE_MANUAL && flags.capture.tiles) {
       capture.tiles = scene.data.tiles.filter(e =>
-          flags.capture.tiles.includes(e._id) &&
-          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle));
+          flags.capture.tiles.includes(e.id) &&
+          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
+      .map(e => e.data);
     }
     if (flags.captureWalls === VEHICLES.CAPTURE_MANUAL && flags.capture.walls) {
       capture.walls = scene.data.walls.filter(e =>
-          flags.capture.walls.includes(e._id) &&
-          game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
-          game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle));
+          flags.capture.walls.includes(e.id) &&
+          game.multilevel._isPointInRegion({x: e.data.c[0], y: e.data.c[1]}, vehicle) &&
+          game.multilevel._isPointInRegion({x: e.data.c[2], y: e.data.c[3]}, vehicle))
+      .map(e => e.data);
     }
     if (flags.captureMapNotes === VEHICLES.CAPTURE_MANUAL && flags.capture.mapNotes) {
       capture.mapNotes = scene.data.notes.filter(e =>
-          flags.capture.mapNotes.includes(e._id) && game.multilevel._isPointInRegion(e, vehicle));
+          flags.capture.mapNotes.includes(e.id) && game.multilevel._isPointInRegion(e.data, vehicle))
+      .map(e => e.data);
     }
     if (flags.captureLights === VEHICLES.CAPTURE_MANUAL && flags.capture.lights) {
       capture.lights = scene.data.lights.filter(e =>
-          flags.capture.lights.includes(e._id) && game.multilevel._isPointInRegion(e, vehicle));
+          flags.capture.lights.includes(e.id) && game.multilevel._isPointInRegion(e.data, vehicle))
+      .map(e => e.data);
     }
     if (flags.captureSounds === VEHICLES.CAPTURE_MANUAL && flags.capture.sounds) {
       capture.sounds = scene.data.sounds.filter(e =>
-          flags.capture.sounds.includes(e._id) && game.multilevel._isPointInRegion(e, vehicle));
+          flags.capture.sounds.includes(e.id) && game.multilevel._isPointInRegion(e.data, vehicle))
+      .map(e => e.data);
     }
     return capture;
   }
@@ -485,8 +460,8 @@ class Vehicles {
       return {x: 0, y: 0};
     }
     const points = scene.data.tokens
-        .filter(t => t.name === pivotToken)
-        .map(t => game.multilevel._getTokenCentre(scene, t));
+        .filter(t => t.data.name === pivotToken)
+        .map(t => game.multilevel._getTokenCentre(scene, t.data));
     if (!points) {
       return {x: 0, y: 0};
     }
@@ -608,7 +583,7 @@ class Vehicles {
       const walls = [];
       if (capture.tokens.length && vFlags.wallCollision) {
         for (const wall of vehicleScene.data.walls) {
-          if (!capture.walls.some(w => w._id === wall._id)) {
+          if (!capture.walls.some(w => w._id === wall.id)) {
             walls.push(new Wall(wall));
           }
         }
@@ -737,85 +712,85 @@ class Vehicles {
     this._runVehicleMoveAlgorithm(requestBatch, handled, queue);
   }
 
-  _onCreateToken(scene, token, options, userId) {
-    this._refreshControllerMapForToken(scene, token);
+  _onCreateToken(token, options, userId) {
+    this._refreshControllerMapForToken(token.parent, token.data);
   }
 
-  _onDeleteToken(scene, token, options, userId) {
+  _onDeleteToken(token, options, userId) {
     if (game.user.isGM) {
-      delete this._controllerMap[this._uniqueId(scene, token)];
+      delete this._controllerMap[this._uniqueId(token.parent, token.data)];
     }
   }
 
-  _onPreUpdateToken(scene, token, update, options, userId) {
+  _onPreUpdateToken(token, update, options, userId) {
     if (game.keyboard.isDown("Alt") && game.user.isGM) {
       options[VEHICLES.BYPASS] = true;
     }
     return true;
   }
 
-  _onUpdateToken(scene, token, update, options, userId) {
+  _onUpdateToken(token, update, options, userId) {
     if (!game.user.isGM) {
       return;
     }
 
     if ("name" in update) {
-      this._refreshControllerMapForToken(scene, token);
+      this._refreshControllerMapForToken(token.parent, token.data);
     }
-    const controller = this._controllerMap[this._uniqueId(scene, token)];
+    const controller = this._controllerMap[this._uniqueId(token.parent, token.data)];
     if (!controller) {
       return;
     }
 
-    if (!game.multilevel._isProperToken(token) ||
+    if (!game.multilevel._isProperToken(token.data) ||
         !game.multilevel._isPrimaryGamemaster() ||
         MLT.REPLICATED_UPDATE in options || VEHICLES.BYPASS in options ||
         !("x" in update || "y" in update || "rotation" in update)) {
-      controller.x = token.x;
-      controller.y = token.y;
-      controller.r = token.rotation;
+      controller.x = token.data.x;
+      controller.y = token.data.y;
+      controller.r = token.data.rotation;
       return;
     }
 
-    const t = duplicate(token);
+    const t = duplicate(token.data);
     const diff = {
-      x: token.x - controller.x,
-      y: token.y - controller.y,
-      r: token.rotation - controller.r,
+      x: token.data.x - controller.x,
+      y: token.data.y - controller.y,
+      r: token.data.rotation - controller.r,
     };
     game.multilevel._queueAsync(requestBatch =>
-        this._queueVehicleMoveByController(requestBatch, scene, t, controller.vehicles, diff));
-    controller.x = token.x;
-    controller.y = token.y;
-    controller.r = token.rotation;
+        this._queueVehicleMoveByController(requestBatch, token.parent, t, controller.vehicles, diff));
+    controller.x = token.data.x;
+    controller.y = token.data.y;
+    controller.r = token.data.rotation;
   }
 
-  _onCreateDrawing(scene, drawing, options, userId) {
-    if (game.user.isGM && this._isVehicle(drawing)) {
-      this._refreshVehicleMapForVehicle(scene, drawing);
+  _onCreateDrawing(drawing, options, userId) {
+    if (game.user.isGM && this._isVehicle(drawing.data)) {
+      this._refreshVehicleMapForVehicle(drawing.parent, drawing.data);
     }
   }
 
-  _onDeleteDrawing(scene, drawing, options, userId) {
+  _onDeleteDrawing(drawing, options, userId) {
     if (game.user.isGM) {
-      delete this._vehicleMap[this._uniqueId(scene, drawing)];
+      delete this._vehicleMap[this._uniqueId(drawing.parent, drawing.data)];
     }
   }
 
-  _onPreUpdateDrawing(scene, drawing, update, options, userId) {
+  _onPreUpdateDrawing(drawing, update, options, userId) {
     if (game.keyboard.isDown("Alt") && game.user.isGM) {
       options[VEHICLES.BYPASS] = true;
     }
-    this._convertDrawingConfigUpdateData(drawing, update);
+    this._convertDrawingConfigUpdateData(drawing.data, update);
     return true;
   }
 
-  _onUpdateDrawing(scene, drawing, update, options, userId) {
+  _onUpdateDrawing(drawing, update, options, userId) {
     if (!game.user.isGM) {
       return;
     }
-    const id = this._uniqueId(scene, drawing);
-    if (!this._isVehicle(drawing)) {
+    const id = this._uniqueId(drawing.parent, drawing.data);
+    if (!this._isVehicle(drawing.data)) {
       delete this._vehicleMap[id];
       return;
     }
@@ -826,21 +801,21 @@ class Vehicles {
     if (!vehicleState || !game.multilevel._isPrimaryGamemaster() ||
         MLT.REPLICATED_UPDATE in options || VEHICLES.BYPASS in options ||
         !("x" in update || "y" in update || "rotation" in update)) {
-      this._refreshVehicleMapForVehicle(scene, drawing);
+      this._refreshVehicleMapForVehicle(drawing.parent, drawing.data);
       return;
     }
 
-    const d = duplicate(drawing);
+    const d = duplicate(drawing.data);
     const diff = {
-      x: drawing.x - vehicleState.x,
-      y: drawing.y - vehicleState.y,
-      r: drawing.rotation - vehicleState.r,
+      x: drawing.data.x - vehicleState.x,
+      y: drawing.data.y - vehicleState.y,
+      r: drawing.data.rotation - vehicleState.r,
     };
     game.multilevel._queueAsync(requestBatch =>
-        this._queueVehicleMoveByDrawing(requestBatch, scene, d, diff));
-    vehicleState.x = drawing.x;
-    vehicleState.y = drawing.y;
-    vehicleState.r = drawing.rotation;
+        this._queueVehicleMoveByDrawing(requestBatch, drawing.parent, d, diff));
+    vehicleState.x = drawing.data.x;
+    vehicleState.y = drawing.data.y;
+    vehicleState.r = drawing.data.rotation;
   }
 
   _onRenderDrawingConfig(app, html, data) {
