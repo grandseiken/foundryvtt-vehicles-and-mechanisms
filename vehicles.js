@@ -97,7 +97,7 @@ class Vehicles {
     html.find(".vehicles-capture").click(async () => {
       const capture = this._getVehicleCaptureSet(object.scene, drawing, VEHICLES.CAPTURE_MANUAL);
       const count = capture.tokens.length + capture.drawings.length + capture.tiles.length +
-                    capture.walls.length + capture.lights.length + capture.sounds.length;
+                    capture.walls.length + capture.mapNotes.length + capture.lights.length + capture.sounds.length;
       const getId = e => e._id;
       const update = {flags: {}};
       update.flags[VEHICLES.SCOPE] = {
@@ -106,11 +106,12 @@ class Vehicles {
           drawings: capture.drawings.map(getId),
           tiles: capture.tiles.map(getId),
           walls: capture.walls.map(getId),
+          mapNotes: capture.mapNotes.map(getId),
           lights: capture.lights.map(getId),
           sounds: capture.sounds.map(getId),
         },
       };
-      await object.update(update);
+      await object.document.update(update);
       ui.notifications.info(game.i18n.format("VEHICLES.NotificationObjectsCaptured", {count: count}));
     });
     html.find(".vehicles-release").click(async () => {
@@ -122,14 +123,15 @@ class Vehicles {
         count += capture.drawings ? capture.drawings.length : 0;
         count += capture.tiles ? capture.tiles.length : 0;
         count += capture.walls ? capture.walls.length : 0;
+        count += capture.mapNotes ? capture.mapNotes.length : 0;
         count += capture.lights ? capture.lights.length : 0;
         count += capture.sounds ? capture.sounds.length : 0;
       }
       const update = {flags: {}};
       update.flags[VEHICLES.SCOPE] = {
-        capture: {tokens: [], drawings: [], tiles: [], walls: [], lights: [], sounds: []},
+        capture: {tokens: [], drawings: [], tiles: [], walls: [], mapNotes: [], lights: [], sounds: []},
       };
-      await object.update(update);
+      await object.document.update(update);
       ui.notifications.info(game.i18n.format("VEHICLES.NotificationObjectsReleased", {count: count}));
     });
   }
@@ -258,7 +260,7 @@ class Vehicles {
     select("captureLights").val(flags.captureLights || 0);
     select("captureSounds").val(flags.captureSounds || 0);
 
-    if (!game.multilevel._isUserGamemaster(game.user._id)) {
+    if (!game.multilevel._isUserGamemaster(game.user.id)) {
       vehiclesTab.find("input").prop("disabled", true);
     }
   }
