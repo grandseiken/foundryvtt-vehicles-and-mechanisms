@@ -633,8 +633,12 @@ class Vehicles {
           for (const offset of offsets) {
             const ray = new Ray({x: vt.x + offset.x, y: vt.y + offset.y},
                                 {x: vt.x + offset.x + rDiff.x, y: vt.y + offset.y + rDiff.y});
-            const collision = WallsLayer.getWallCollisionsForRay(ray, potentialWalls, {mode: "closest"});
-            t = Math.min(t, collision.t0);
+            for (const wall of potentialWalls) {
+              const collision = WallsLayer.testWall(ray, wall);
+              if (collision) {
+                t = Math.min(t, collision.t0);
+              }
+            }
           }
           if (t < 2 * epsilon) {
             t = 0;
