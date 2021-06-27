@@ -370,33 +370,33 @@ class Vehicles {
   _getVehicleCaptureSet(scene, vehicle, captureType) {
     const flags = vehicle.flags[VEHICLES.SCOPE];
     return {
-      tokens: flags.captureTokens === captureType
+      tokens: flags?.captureTokens === captureType
           ? scene.data.tokens.filter(e => !game.multilevel._isReplicatedToken(e.data) &&
                                           game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e.data), vehicle))
                              .map(e => e.data)
           : [],
-      drawings: flags.captureDrawings === captureType
+      drawings: flags?.captureDrawings === captureType
           ? scene.data.drawings.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
                                .map(e => e.data)
           : [],
-      tiles: flags.captureTiles === captureType
+      tiles: flags?.captureTiles === captureType
           ? scene.data.tiles.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
                             .map(e => e.data)
           : [],
-      walls: flags.captureWalls === captureType
+      walls: flags?.captureWalls === captureType
           ? scene.data.walls.filter(e => game.multilevel._isPointInRegion({x: e.data.c[0], y: e.data.c[1]}, vehicle) &&
                                          game.multilevel._isPointInRegion({x: e.data.c[2], y: e.data.c[3]}, vehicle))
                             .map(e => e.data)
           : [],
-      mapNotes: flags.captureMapNotes === captureType
+      mapNotes: flags?.captureMapNotes === captureType
           ? scene.data.notes.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
                             .map(e => e.data)
           : [],
-      lights: flags.captureLights === captureType
+      lights: flags?.captureLights === captureType
           ? scene.data.lights.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
                              .map(e => e.data)
           : [],
-      sounds: flags.captureSounds === captureType
+      sounds: flags?.captureSounds === captureType
           ? scene.data.sounds.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
                              .map(e => e.data)
           : [],
@@ -406,7 +406,7 @@ class Vehicles {
   _getMergedVehicleCaptureSet(scene, vehicle) {
     const capture = this._getVehicleCaptureSet(scene, vehicle, VEHICLES.CAPTURE_AUTO);
     const flags = vehicle.flags[VEHICLES.SCOPE];
-    if (!flags.capture) {
+    if (!flags || !flags.capture) {
       return capture;
     }
     if (flags.captureTokens === VEHICLES.CAPTURE_MANUAL && flags.capture.tokens) {
