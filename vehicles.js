@@ -490,7 +490,14 @@ class Vehicles {
     } else if (controlScheme === VEHICLES.CONTROL_SCHEME_RELATIVE) {
       result = game.multilevel._rotate({x: 0, y: 0}, result, vehicle.rotation - controllerToken.rotation);
     }
-    result.r = diff.r * flags.angularCoefficient;
+    result.r = diff.r;
+    while (result.r > 180) {
+      result.r -= 360;
+    }
+    while (result.r < -180) {
+      result.r += 360;
+    }
+    result.r *= flags.angularCoefficient;
     return result;
   }
 
@@ -729,7 +736,7 @@ class Vehicles {
   }
 
   _onPreUpdateToken(token, update, options, userId) {
-    if (game.keyboard.isDown("Alt") && game.user.isGM) {
+    if (game.keyboard.downKeys.has("AltLeft") && game.user.isGM) {
       options[VEHICLES.BYPASS] = true;
     }
     return true;
@@ -784,7 +791,7 @@ class Vehicles {
   }
 
   _onPreUpdateDrawing(drawing, update, options, userId) {
-    if (game.keyboard.isDown("Alt") && game.user.isGM) {
+    if (game.keyboard.downKeys.has("AltLeft") && game.user.isGM) {
       options[VEHICLES.BYPASS] = true;
     }
     this._convertDrawingConfigUpdateData(drawing.data, update);

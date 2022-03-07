@@ -103,6 +103,9 @@ The **X-coefficient**, **Y-coefficient** and **Angular coefficient** settings af
 
 # Version history
 
+* **0.4.1**:
+  * Replaced use of functionality deprecated in Foundry version 9.
+  * Fixed irregularities when using a controller token with an angular coefficient less than 1.
 * **0.4.0**:
   * Updated for compatibility with Foundry 0.8.x series. No longer compatible with 0.7.x series.
   * Fixed wall collision option.
