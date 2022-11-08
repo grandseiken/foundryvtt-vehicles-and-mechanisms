@@ -548,7 +548,7 @@ class Vehicles {
 
       handleSimpleCapture(vehicleScene, vehicleCentre, diff,
                           "T", capture.tiles,
-                          e => game.multilevel._getDrawingCentre(e),
+                          e => this._getTileCentre(e),
                           u => requestBatch.updateTile(vehicleScene, u));
       handleSimpleCapture(vehicleScene, vehicleCentre, diff,
                           "n", capture.mapNotes, e => e,
