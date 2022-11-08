@@ -67,10 +67,10 @@ class Vehicles {
       }
 
       const requiredMltVersion = parseVersion(VEHICLES.REQUIRED_MLT_VERSION);
-      const mltVersion = parseVersion(mltModule.data.version);
+      const mltVersion = parseVersion(mltModule.version);
       if (versionLess(mltVersion, requiredMltVersion)) {
         raiseError("Vehicles and Mechanisms requires Multilevel Tokens >= " + VEHICLES.REQUIRED_MLT_VERSION +
-                   ", but version " + mltModule.data.version + " was found. The module might not function correctly.");
+                   ", but version " + mltModule.version + " was found. The module might not function correctly.");
         return;
       }
       this._dependenciesOK = true;
@@ -115,7 +115,7 @@ class Vehicles {
       ui.notifications.info(game.i18n.format("VEHICLES.NotificationObjectsCaptured", {count: count}));
     });
     html.find(".vehicles-release").click(async () => {
-      const currentDrawing = object.scene.data.drawings.find(d => d.id === drawing._id)?.data;
+      const currentDrawing = object.scene.drawings.find(d => d.id === drawing._id);
       let count = 0;
       if (currentDrawing && currentDrawing.flags[VEHICLES.SCOPE] && currentDrawing.flags[VEHICLES.SCOPE].capture) {
         const capture = currentDrawing.flags[VEHICLES.SCOPE].capture;
@@ -315,8 +315,8 @@ class Vehicles {
     }
     this._controllerMap = {};
     for (const scene of game.scenes) {
-      for (const token of scene.data.tokens) {
-        this._refreshControllerMapForToken(scene, token.data);
+      for (const token of scene.tokens) {
+        this._refreshControllerMapForToken(scene, token);
       }
     }
   }
@@ -327,8 +327,8 @@ class Vehicles {
     }
     this._vehicleMap = {};
     for (const scene of game.scenes) {
-      for (const drawing of scene.data.drawings) {
-        this._refreshVehicleMapForVehicle(scene, drawing.data);
+      for (const drawing of scene.drawings) {
+        this._refreshVehicleMapForVehicle(scene, drawing);
       }
     }
   }
@@ -340,8 +340,7 @@ class Vehicles {
     const id = this._uniqueId(scene, token);
     delete this._controllerMap[id];
     for (const vehicleScene of game.scenes) {
-      for (const d of vehicleScene.data.drawings) {
-        const drawing = d.data;
+      for (const drawing of vehicleScene.drawings) {
         if (drawing.flags[VEHICLES.SCOPE] &&
             drawing.flags[VEHICLES.SCOPE].controllerToken === token.name &&
             (drawing.flags[VEHICLES.SCOPE].crossSceneControl || scene === vehicleScene)) {
@@ -367,38 +366,45 @@ class Vehicles {
     };
   }
 
+  _getTileCentre(tile) {
+    return {
+      x: tile.x + tile.width / 2,
+      y: tile.y + tile.height / 2
+    };
+  }
+
   _getVehicleCaptureSet(scene, vehicle, captureType) {
     const flags = vehicle.flags[VEHICLES.SCOPE];
     return {
       tokens: flags?.captureTokens === captureType
-          ? scene.data.tokens.filter(e => !game.multilevel._isReplicatedToken(e.data) &&
-                                          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e.data), vehicle))
-                             .map(e => e.data)
+          ? scene.tokens.filter(e => !game.multilevel._isReplicatedToken(e) &&
+                                          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle))
+                             .map(e => e)
           : [],
       drawings: flags?.captureDrawings === captureType
-          ? scene.data.drawings.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
-                               .map(e => e.data)
+          ? scene.drawings.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+                               .map(e => e)
           : [],
       tiles: flags?.captureTiles === captureType
-          ? scene.data.tiles.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
-                            .map(e => e.data)
+          ? scene.tiles.filter(e => game.multilevel._isPointInRegion(this._getTileCentre(e), vehicle))
+                            .map(e => e)
           : [],
       walls: flags?.captureWalls === captureType
-          ? scene.data.walls.filter(e => game.multilevel._isPointInRegion({x: e.data.c[0], y: e.data.c[1]}, vehicle) &&
-                                         game.multilevel._isPointInRegion({x: e.data.c[2], y: e.data.c[3]}, vehicle))
-                            .map(e => e.data)
+          ? scene.walls.filter(e => game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
+                                         game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle))
+                            .map(e => e)
           : [],
       mapNotes: flags?.captureMapNotes === captureType
-          ? scene.data.notes.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
-                            .map(e => e.data)
+          ? scene.notes.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+                            .map(e => e)
           : [],
       lights: flags?.captureLights === captureType
-          ? scene.data.lights.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
-                             .map(e => e.data)
+          ? scene.lights.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+                             .map(e => e)
           : [],
       sounds: flags?.captureSounds === captureType
-          ? scene.data.sounds.filter(e => game.multilevel._isPointInRegion(e.data, vehicle))
-                             .map(e => e.data)
+          ? scene.sounds.filter(e => game.multilevel._isPointInRegion(e, vehicle))
+                             .map(e => e)
           : [],
     };
   }
@@ -410,44 +416,44 @@ class Vehicles {
       return capture;
     }
     if (flags.captureTokens === VEHICLES.CAPTURE_MANUAL && flags.capture.tokens) {
-      capture.tokens = scene.data.tokens.filter(e =>
+      capture.tokens = scene.tokens.filter(e =>
           flags.capture.tokens.includes(e.id) &&
-          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e.data), vehicle))
-      .map(e => e.data);
+          game.multilevel._isPointInRegion(game.multilevel._getTokenCentre(scene, e), vehicle))
+      .map(e => e);
     }
     if (flags.captureDrawings === VEHICLES.CAPTURE_MANUAL && flags.capture.drawings) {
-      capture.drawings = scene.data.drawings.filter(e =>
+      capture.drawings = scene.drawings.filter(e =>
           flags.capture.drawings.includes(e.id) &&
-          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
-      .map(e => e.data);
+          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+      .map(e => e);
     }
     if (flags.captureTiles === VEHICLES.CAPTURE_MANUAL && flags.capture.tiles) {
-      capture.tiles = scene.data.tiles.filter(e =>
+      capture.tiles = scene.tiles.filter(e =>
           flags.capture.tiles.includes(e.id) &&
-          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e.data), vehicle))
-      .map(e => e.data);
+          game.multilevel._isPointInRegion(this._getTileCentre(e), vehicle))
+      .map(e => e);
     }
     if (flags.captureWalls === VEHICLES.CAPTURE_MANUAL && flags.capture.walls) {
-      capture.walls = scene.data.walls.filter(e =>
+      capture.walls = scene.walls.filter(e =>
           flags.capture.walls.includes(e.id) &&
-          game.multilevel._isPointInRegion({x: e.data.c[0], y: e.data.c[1]}, vehicle) &&
-          game.multilevel._isPointInRegion({x: e.data.c[2], y: e.data.c[3]}, vehicle))
-      .map(e => e.data);
+          game.multilevel._isPointInRegion({x: e.c[0], y: e.c[1]}, vehicle) &&
+          game.multilevel._isPointInRegion({x: e.c[2], y: e.c[3]}, vehicle))
+      .map(e => e);
     }
     if (flags.captureMapNotes === VEHICLES.CAPTURE_MANUAL && flags.capture.mapNotes) {
-      capture.mapNotes = scene.data.notes.filter(e =>
-          flags.capture.mapNotes.includes(e.id) && game.multilevel._isPointInRegion(e.data, vehicle))
-      .map(e => e.data);
+      capture.mapNotes = scene.notes.filter(e =>
+          flags.capture.mapNotes.includes(e.id) && game.multilevel._isPointInRegion(e, vehicle))
+      .map(e => e);
     }
     if (flags.captureLights === VEHICLES.CAPTURE_MANUAL && flags.capture.lights) {
-      capture.lights = scene.data.lights.filter(e =>
-          flags.capture.lights.includes(e.id) && game.multilevel._isPointInRegion(e.data, vehicle))
-      .map(e => e.data);
+      capture.lights = scene.lights.filter(e =>
+          flags.capture.lights.includes(e.id) && game.multilevel._isPointInRegion(e, vehicle))
+      .map(e => e);
     }
     if (flags.captureSounds === VEHICLES.CAPTURE_MANUAL && flags.capture.sounds) {
-      capture.sounds = scene.data.sounds.filter(e =>
-          flags.capture.sounds.includes(e.id) && game.multilevel._isPointInRegion(e.data, vehicle))
-      .map(e => e.data);
+      capture.sounds = scene.sounds.filter(e =>
+          flags.capture.sounds.includes(e.id) && game.multilevel._isPointInRegion(e, vehicle))
+      .map(e => e);
     }
     return capture;
   }
@@ -461,9 +467,9 @@ class Vehicles {
     if (!pivotToken) {
       return {x: 0, y: 0};
     }
-    const points = scene.data.tokens
-        .filter(t => t.data.name === pivotToken)
-        .map(t => game.multilevel._getTokenCentre(scene, t.data));
+    const points = scene.tokens
+        .filter(t => t.name === pivotToken)
+        .map(t => game.multilevel._getTokenCentre(scene, t));
     if (!points) {
       return {x: 0, y: 0};
     }
@@ -542,7 +548,7 @@ class Vehicles {
 
       handleSimpleCapture(vehicleScene, vehicleCentre, diff,
                           "T", capture.tiles,
-                          e => game.multilevel._getDrawingCentre(e),
+                          e => this._getTileCentre(e),
                           u => requestBatch.updateTile(vehicleScene, u));
       handleSimpleCapture(vehicleScene, vehicleCentre, diff,
                           "n", capture.mapNotes, e => e,
@@ -591,7 +597,7 @@ class Vehicles {
 
       const walls = [];
       if (capture.tokens.length && vFlags.wallCollision) {
-        for (const wall of vehicleScene.data.walls) {
+        for (const wall of vehicleScene.walls) {
           if (!capture.walls.some(w => w._id === wall.id)) {
             walls.push(new Wall(wall));
           }
@@ -611,7 +617,7 @@ class Vehicles {
         if (vFlags.wallCollision) {
           const potentialWalls = [];
           for (const wall of walls) {
-            const c = wall.data.c;
+            const c = wall.c;
             const wallNormal = {x: c[1] - c[3], y: c[2] - c[0]};
             const tokenSign = (tokenCentre.x - c[0]) * wallNormal.x + (tokenCentre.y - c[1]) * wallNormal.y;
             const dSign = rDiff.x * wallNormal.x + rDiff.y * wallNormal.y;
@@ -626,16 +632,16 @@ class Vehicles {
             offsets.push({x: 0, y: 0}, {x: epsilon, y: epsilon});
           }
           if (rDiff.x > 0 || rDiff.y < 0) {
-            offsets.push({x: vt.width * vehicleScene.data.grid, y: 0},
-                         {x: vt.width * vehicleScene.data.grid - epsilon, y: epsilon});
+            offsets.push({x: vt.width * vehicleScene.grid, y: 0},
+                         {x: vt.width * vehicleScene.grid - epsilon, y: epsilon});
           }
           if (rDiff.x > 0 || rDiff.y > 0) {
-            offsets.push({x: vt.width * vehicleScene.data.grid, y: vt.height * vehicleScene.data.grid},
-                         {x: vt.width * vehicleScene.data.grid - epsilon, y: vt.height * vehicleScene.data.grid - epsilon});
+            offsets.push({x: vt.width * vehicleScene.grid, y: vt.height * vehicleScene.grid},
+                         {x: vt.width * vehicleScene.grid - epsilon, y: vt.height * vehicleScene.grid - epsilon});
           }
           if (rDiff.x < 0 || rDiff.y > 0) {
-            offsets.push({x: 0, y: vt.height * vehicleScene.data.grid},
-                         {x: epsilon, y: vt.height * vehicleScene.data.grid - epsilon});
+            offsets.push({x: 0, y: vt.height * vehicleScene.grid},
+                         {x: epsilon, y: vt.height * vehicleScene.grid - epsilon});
           }
           for (const offset of offsets) {
             const ray = new Ray({x: vt.x + offset.x, y: vt.y + offset.y},
@@ -726,12 +732,12 @@ class Vehicles {
   }
 
   _onCreateToken(token, options, userId) {
-    this._refreshControllerMapForToken(token.parent, token.data);
+    this._refreshControllerMapForToken(token.parent, token);
   }
 
   _onDeleteToken(token, options, userId) {
     if (game.user.isGM) {
-      delete this._controllerMap[this._uniqueId(token.parent, token.data)];
+      delete this._controllerMap[this._uniqueId(token.parent, token)];
     }
   }
 
@@ -748,45 +754,45 @@ class Vehicles {
     }
 
     if ("name" in update) {
-      this._refreshControllerMapForToken(token.parent, token.data);
+      this._refreshControllerMapForToken(token.parent, token);
     }
-    const controller = this._controllerMap[this._uniqueId(token.parent, token.data)];
+    const controller = this._controllerMap[this._uniqueId(token.parent, token)];
     if (!controller) {
       return;
     }
 
-    if (!game.multilevel._isProperToken(token.data) ||
+    if (!game.multilevel._isProperToken(token) ||
         !game.multilevel._isPrimaryGamemaster() ||
         MLT.REPLICATED_UPDATE in options || VEHICLES.BYPASS in options ||
         !("x" in update || "y" in update || "rotation" in update)) {
-      controller.x = token.data.x;
-      controller.y = token.data.y;
-      controller.r = token.data.rotation;
+      controller.x = token.x;
+      controller.y = token.y;
+      controller.r = token.rotation;
       return;
     }
 
-    const t = duplicate(token.data);
+    const t = duplicate(token);
     const diff = {
-      x: token.data.x - controller.x,
-      y: token.data.y - controller.y,
-      r: token.data.rotation - controller.r,
+      x: token.x - controller.x,
+      y: token.y - controller.y,
+      r: token.rotation - controller.r,
     };
     game.multilevel._queueAsync(requestBatch =>
         this._queueVehicleMoveByController(requestBatch, token.parent, t, controller.vehicles, diff));
-    controller.x = token.data.x;
-    controller.y = token.data.y;
-    controller.r = token.data.rotation;
+    controller.x = token.x;
+    controller.y = token.y;
+    controller.r = token.rotation;
   }
 
   _onCreateDrawing(drawing, options, userId) {
-    if (game.user.isGM && this._isVehicle(drawing.data)) {
-      this._refreshVehicleMapForVehicle(drawing.parent, drawing.data);
+    if (game.user.isGM && this._isVehicle(drawing)) {
+      this._refreshVehicleMapForVehicle(drawing.parent, drawing);
     }
   }
 
   _onDeleteDrawing(drawing, options, userId) {
     if (game.user.isGM) {
-      delete this._vehicleMap[this._uniqueId(drawing.parent, drawing.data)];
+      delete this._vehicleMap[this._uniqueId(drawing.parent, drawing)];
     }
   }
 
@@ -794,7 +800,7 @@ class Vehicles {
     if (game.keyboard.downKeys.has("AltLeft") && game.user.isGM) {
       options[VEHICLES.BYPASS] = true;
     }
-    this._convertDrawingConfigUpdateData(drawing.data, update);
+    this._convertDrawingConfigUpdateData(drawing, update);
     return true;
   }
 
@@ -802,8 +808,8 @@ class Vehicles {
     if (!game.user.isGM) {
       return;
     }
-    const id = this._uniqueId(drawing.parent, drawing.data);
-    if (!this._isVehicle(drawing.data)) {
+    const id = this._uniqueId(drawing.parent, drawing);
+    if (!this._isVehicle(drawing)) {
       delete this._vehicleMap[id];
       return;
     }
@@ -814,21 +820,21 @@ class Vehicles {
     if (!vehicleState || !game.multilevel._isPrimaryGamemaster() ||
         MLT.REPLICATED_UPDATE in options || VEHICLES.BYPASS in options ||
         !("x" in update || "y" in update || "rotation" in update)) {
-      this._refreshVehicleMapForVehicle(drawing.parent, drawing.data);
+      this._refreshVehicleMapForVehicle(drawing.parent, drawing);
       return;
     }
 
-    const d = duplicate(drawing.data);
+    const d = duplicate(drawing);
     const diff = {
-      x: drawing.data.x - vehicleState.x,
-      y: drawing.data.y - vehicleState.y,
-      r: drawing.data.rotation - vehicleState.r,
+      x: drawing.x - vehicleState.x,
+      y: drawing.y - vehicleState.y,
+      r: drawing.rotation - vehicleState.r,
     };
     game.multilevel._queueAsync(requestBatch =>
         this._queueVehicleMoveByDrawing(requestBatch, drawing.parent, d, diff));
-    vehicleState.x = drawing.data.x;
-    vehicleState.y = drawing.data.y;
-    vehicleState.r = drawing.data.rotation;
+    vehicleState.x = drawing.x;
+    vehicleState.y = drawing.y;
+    vehicleState.r = drawing.rotation;
   }
 
   _onRenderDrawingConfig(app, html, data) {
