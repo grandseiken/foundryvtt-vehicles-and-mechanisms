@@ -366,6 +366,13 @@ class Vehicles {
     };
   }
 
+  _getTileCentre(tile) {
+    return {
+      x: tile.x + tile.width / 2,
+      y: tile.y + tile.height / 2
+    };
+  }
+
   _getVehicleCaptureSet(scene, vehicle, captureType) {
     const flags = vehicle.flags[VEHICLES.SCOPE];
     return {
@@ -379,7 +386,7 @@ class Vehicles {
                                .map(e => e)
           : [],
       tiles: flags?.captureTiles === captureType
-          ? scene.tiles.filter(e => game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+          ? scene.tiles.filter(e => game.multilevel._isPointInRegion(this._getTileCentre(e), vehicle))
                             .map(e => e)
           : [],
       walls: flags?.captureWalls === captureType
@@ -423,7 +430,7 @@ class Vehicles {
     if (flags.captureTiles === VEHICLES.CAPTURE_MANUAL && flags.capture.tiles) {
       capture.tiles = scene.tiles.filter(e =>
           flags.capture.tiles.includes(e.id) &&
-          game.multilevel._isPointInRegion(game.multilevel._getDrawingCentre(e), vehicle))
+          game.multilevel._isPointInRegion(this._getTileCentre(e), vehicle))
       .map(e => e);
     }
     if (flags.captureWalls === VEHICLES.CAPTURE_MANUAL && flags.capture.walls) {
